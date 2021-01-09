@@ -251,3 +251,42 @@ public class DaoFactory {
 
         UserDao userDao = context.getBean("userDao",UserDao.class);
 ```
+
+## 1.5.2 애플리케이션 컨텍스트의 동작방식
+애플리케이션 컨텍스트는 ApplicationContext 인터페이스를 구현하는데. ApplicationContext 빈 팩토리가 구현하는 
+BeanFactory 인터페이스를 상속했으므로 애플리케이션 컨텍스트는 일종의 빈 팩토리인 셈이다.
+### ApplicationContext의 장점
+1. 를라이언트는 구체적인 팩토리 를래스롤 알 필요가 없다
+2. 애를리케이션 컨텍스트는 종합 loC 서비스톨 제공해준다
+3. 애풀리케이션 컨텍스트는 빈올 검색하는 다양한 방법올 제공해준다
+
+## 1.5.3 스프링 oC의 용어 정리
+1. 빈(Bean)
+    - Spring이 Ioc방식으로 관리하는 오브젝트
+    - Spring이 직접 생성과 제어를 담당하는 오브젝트만 해당
+2. 빈 팩토리(Bean Factory)
+    - 스프링의 IoC를 담당하는 핵심 컨테이너를 가리킨다.
+    - 빈을 등록, 생성, 조회, 반환 등 전반적인 빈 관리를 담당한다.
+    - 빈 팩토리를 직접 사용하지 않고 보통 AplicationContext를 이용한다.
+3. 애플리케이션 컨텍스트(Application Context)
+    - 빈 팩토리를 확장한 IoC 컨테이너
+    - Bean Factory 인터페이스를 구현한다.
+      ```
+      public interface BeanFactory {
+            ...      
+          <T> T getBean(String var1, Class<T> var2) throws BeansException;
+      
+          <T> T getBean(Class<T> var1) throws BeansException;
+            ...
+      ```
+      
+4. 설정정보/설정 메타정보
+    - 스프링의 설정정보란 애플리케이션 컨텍스트 또는 빈 팩토리가 IoC를 적용하기 위 
+      해 사용하는 메타정보를 말한다
+    -  IoC 컨테이너에 의해 관리되는 애플리케이션 오브젝트를 생성하고 구성할 때 사용된다.
+5. 컨테이너 또는 loC컨테이너 
+    - IoC 방식으로 빈을 관리한다는 의미에서 애플리케이션 컨텍스트나 빈 팩토리
+    - 대체로 애플리케이션 컨텍스트를 가르킨다.
+6. 스프링프레임워크 (Spring Framework)
+    - 스프링 프레임워크는 IoC 컨테이너， 애플리케이션 컨텍스트를 포함해서 스프링이 
+      제공하는 모든 기능을 통틀어 말할 때 주로 사용
