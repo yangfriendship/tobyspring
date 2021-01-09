@@ -391,6 +391,19 @@ getBean()메서드를 통해 얻어온 UserDao 객체가 동일한 객체
 3. 외부에서 의존 오브젝트의 레퍼런스를 주입함으로써 만들어진다.
 Spring에서는 Ioc컨터에너, 빈 팩토리 ,어플리케이션 컨텍스트 등이 제 3자라고 할 수 있다.
 
+## 1.7.3 의존관계 검색과 주입
+의존관계 검색(Dependency Lookup) : 런타임 시, 자신이 필요로 하는 의존 오브젝를 능동적으로 찾는다.직접 대상을 선택하지는 않지만, 메소드나 생성자를 통한 주입 대신 스스로 컨테이너에게 요청하는 방법을 사용한다.
+ex) getBean()메서드
+```
+        ApplicationContext context = new AnnotationConfigApplicationContext(
+            DaoFactory.class);
+
+        UserDao userDao1 = context.getBean("userDao",UserDao.class);
+```
+UserDaoTest(클라이언트)가 UserDao라는 의존객체를 getBean()을 통해서 검색한다. 하지만 UserDaoTest는 여전히 어떤 UserDao가 올 지 모른다.
+대부분 DI를 통해서 객체를 생성하는 편이 낫지만, DL을 사용해야 하는 경우도 있다.
+어플리케이션 컨텍스트에게 DI를 받도록 설정하려면, 의존객체를 필요로 하는 객체 또한 컨텍스트가 관리하는 Bean으로 등록되어야 한다.
+하지만 DL을 통해 의존 객체를 능동적으로 검색하여 사용한다면, `Bean으로 등록되지 않아도 된다`.
 
 
  
