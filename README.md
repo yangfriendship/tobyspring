@@ -502,4 +502,51 @@ public class UserDao {
         return userDao;
     }
 ```
+
+## 1.8 XML을 이용한 설정
+Spring은 자바코드, XML, 언노테이션을 이용한 DI의존 관계 설정이 가능하다.
+1. XML을 통한 의존관계 설정은 별도의 컴파일 빌드 과정이 없다는 장점이 있다.
+2. 또한 스프링이 지정한 `네임스페이스`를 적극적으로 사용할 수 있다.
+3. 이전에 가장 어렵다고 생각했던 설정 방식이지만 IDE의 도움을 받으니 딱히 어렵지도 않은 것 같다.
+4. 가장 가독성이 높다고 생각한다(극히 개인적인 의견)
+
+## 1.8.1 XML 설정
+1. Spring Bean을 등록할 Xml의 DTD와 스키마
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+</beans>
+```
+
+2. 기존의 DaoFactory(Configuration)을 XML형식으로 변환(ApplicationContext.xml)
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+  <bean id="userDao" class="springbook.user.UserDao">
+    <property name="connectionMaker" ref="connectionMaker"/>
+    
+  </bean>
+  <bean id="connectionMaker" class="springbook.user.YConnectionMaker"/>
+</beans>
+```
+3. XML에 설정된 Bean 검색
+기존의 Annotation(@Configuration)을 이용한 설정을 불러들일 때는  AnnotationConfigApplicationContext을 사용했다.
+```
+ ApplicationContext context = new AnnotationConfigApplicationContext([className]);
+```
+Xml을 통한 설정을 사용할 때는 GenericXmlApplicationContext을 이용한다.
+```
+ ApplicationContext context = new GenericXmlApplicationContext("applicationContext.xml");
+```
+4. ClassPathXmlApplicationContext
+GenericXmlApplicationContext에 클래스패스에 대한 힌트를 제공할 수 있다.
+```
+ ApplicationContext context = new ClassPathXmlApplicationContext([xml이있는패키지의클래스.class],"applicationContext.xml");
+```
+
  
