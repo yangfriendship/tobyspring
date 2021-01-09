@@ -1,10 +1,19 @@
 package springbook.user;
 
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
 public class DaoFactory {
 
+    @Bean
     public UserDao userDao() {
-        YConnectionMaker connectionMaker = new YConnectionMaker();
-        UserDao userDao = new UserDao(connectionMaker);
+        UserDao userDao = new UserDao(connectionMaker());
         return userDao;
+    }
+
+    @Bean
+    public ConnectionMaker connectionMaker() {
+        return new YConnectionMaker();
     }
 }

@@ -4,6 +4,8 @@ import java.sql.SQLException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 public class UserDaoTest {
 
@@ -26,6 +28,25 @@ public class UserDaoTest {
         Assert.assertEquals(user.getName(), find.getName());
         Assert.assertEquals(user.getPassword(), find.getPassword());
 
+    }
+
+    @Test
+    public void addTestWithContext() throws SQLException, ClassNotFoundException {
+
+        ApplicationContext context = new AnnotationConfigApplicationContext(
+            DaoFactory.class);
+
+        UserDao userDao = context.getBean("userDao",UserDao.class);
+
+
+        User user = new User("1", "name", "ps");
+        userDao.add(user);
+
+        User find = userDao.get(user.getId());
+
+        Assert.assertEquals(user.getId(), find.getId());
+        Assert.assertEquals(user.getName(), find.getName());
+        Assert.assertEquals(user.getPassword(), find.getPassword());
     }
 
 }

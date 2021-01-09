@@ -213,4 +213,41 @@ public class UserDao {
 3. 하지만 제어의 역전에서는 오브젝트가 자신이 사용할 오브젝트를 스스로 선택 혹은 생성하지 않는다
 4   제어권을 상위 템플릿 메소드에 넘기고 자신은 필요할 때 호출되어 사용되도록 한다.
 
+## 1.5.1 오브젝트 팩토리를 이용한 스프링 loC
+1. 스프링에서는 스프링이 제어권을 가지고 직접 만들고 관계를 부여하는 오브젝트를 Bean이라고 부른다.
+2. 빈은 스프링 컨테이너가 생성과 관계설정, 사용등을 제어해주는제어의 역전이 적용된 오브젝트를 뜻한다.
+3. 스프링에서는 빈의 생성과 관계설정 같은 제어를 담당하는 IoC 오브젝트를 빈 팩토 
+   Bean Factory 라고 부른다.
+4. 빈 팩토리보다는 이를 좀 더 확장한 애플리케이션 컨텍스트를 주로 사용
 
+스프링을 통한 BeanFactory
+1. 언노테이션을 통한 Spring Bean 등록
+    - @Configuration : 애플리케이션 컨텍스트 또는 빈 팩토리가 사용할 설정정보라는 표시
+    - @Bean : 오브젝트 생성을 담당는 IoC용 메서드라는 표시
+```
+@Configuration
+public class DaoFactory {
+
+    @Bean
+    public UserDao userDao() {
+        UserDao userDao = new UserDao(connectionMaker());
+        return userDao;
+    }
+
+    @Bean
+    public ConnectionMaker connectionMaker() {
+        return new YConnectionMaker();
+    }
+}
+```
+
+2. ApplicationContext를 이용해서 UserDao를 생성
+```
+ @Test
+    public void addTestWithContext() throws SQLException, ClassNotFoundException {
+
+        ApplicationContext context = new AnnotationConfigApplicationContext(
+            DaoFactory.class);
+
+        UserDao userDao = context.getBean("userDao",UserDao.class);
+```
