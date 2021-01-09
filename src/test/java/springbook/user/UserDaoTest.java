@@ -11,7 +11,7 @@ public class UserDaoTest {
 
     @Before
     public void setUp() {
-        this.userDao = new UserDao();
+        this.userDao = new DaoFactory().userDao();
     }
 
     @Test
@@ -22,9 +22,9 @@ public class UserDaoTest {
 
         User find = userDao.get(user.getId());
 
-        Assert.assertEquals(user.getId(),find.getId());
-        Assert.assertEquals(user.getName(),find.getName());
-        Assert.assertEquals(user.getPassword(),find.getPassword());
+        Assert.assertEquals(user.getId(), find.getId());
+        Assert.assertEquals(user.getName(), find.getName());
+        Assert.assertEquals(user.getPassword(), find.getPassword());
 
     }
 
