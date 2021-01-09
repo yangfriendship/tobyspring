@@ -11,7 +11,7 @@ public class UserDaoTest {
 
     @Before
     public void setUp() {
-        this.userDao = new YUserDao();
+        this.userDao = new UserDao();
     }
 
     @Test

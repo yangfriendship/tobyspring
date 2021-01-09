@@ -49,3 +49,47 @@ public class YUserDao extends UserDao {
 팩토리 메서드 패턴(`factory method pattern`)이라고 한다.
 서브클래스(YUserDao)에서 Connection 생성에 대한 메서드를 설정하고, 슈퍼클래스(USerDao)에 정의된
 구체적인 로직을 이용한다.
+
+## 클래스 분리 1.3.1
+서로 다른 관심사를 클래스 단위로 분리한다.
+DB Connection을 생성하는 SimpleConnectionMaker 클래스를 작성
+```
+public class SimpleConnectionMaker {
+    public Connection makeNewConnection() throws ClassNotFoundException, SQLException {
+        Class.forName("org.h2.Driver");
+        return DriverManager.getConnection(
+            "jdbc:h2:tcp://localhost/~/test", "sa", "");
+    }
+}
+```
+
+```
+public class UserDao {
+
+    private SimpleConnectionMaker connectionMaker;
+
+    public UserDao() {
+        this.connectionMaker = new SimpleConnectionMaker();
+    }
+
+    public void add(User user) throws ClassNotFoundException, SQLException {
+          Connection c = connectionMaker.makeNewConnection(); // ConnectionMaker을 통해서 Connection을 생성
+      // 생략
+    }
+
+    public User get(String id) throws ClassNotFoundException, SQLException {
+        Connection c = connectionMaker.makeNewConnection(); // ConnectionMaker을 통해서 Connection을 생성
+      // 생략
+    }
+
+```
+현재 UserDao는 Connection을 받아오는 SimplecConnectionMaker에 대해서 구체적으로 알고 있다.
+```
+public class UserDao {
+
+    private SimpleConnectionMaker connectionMaker;
+
+    public UserDao() {
+        this.connectionMaker = new SimpleConnectionMaker();
+    }
+```
