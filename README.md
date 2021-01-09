@@ -1,5 +1,5 @@
-# tobyspring
-토비의 스프링 vol.1 2회차 저장소
+# Toby Spring vol.1
+토비의 스프링 vol.1 2회차
 
 ## 1.2.1~ 1.2.2
 ### UserDao의 관심사 및 분리
@@ -290,3 +290,71 @@ BeanFactory 인터페이스를 상속했으므로 애플리케이션 컨텍스�
 6. 스프링프레임워크 (Spring Framework)
     - 스프링 프레임워크는 IoC 컨테이너， 애플리케이션 컨텍스트를 포함해서 스프링이 
       제공하는 모든 기능을 통틀어 말할 때 주로 사용
+
+## 1.6 싱글톤 레지스트리오} 오브젝트 스코프
+
+오브젝트의 `동등성`과 `동일성`
+1. 동일성은 `==`연산자를 통해서 판단, 일반적으로 메모리 주소값이 같아야지 동일한 객체로 판단
+2. 동등성 `equals`(Override필수)를 통해서 비교하는 두 객체의 값이 같은지 확인하는 것
+
+기존의 DaoFactory를 이용해서 UserDao를 생성한 테스트
+```
+    @Test
+    public void daoFactorySingleTonTest(){
+        DaoFactory factory = new DaoFactory();
+        UserDao userDao1 = factory.userDao();
+        UserDao userDao2 = factory.userDao();
+
+        Assert.assertNotSame(userDao1,userDao2);
+    }
+```
+dao1,dao2가 동일하지 않다. 호출할 때 마다 UserDao를 생성해서 반환하기 때문
+즉, 각 호출마다 새로운 오브젝트가 생성됐다.
+```
+    public UserDao userDao() {
+        UserDao userDao = new UserDao(connectionMaker());
+        return userDao;
+    }
+```
+SingleTon 디자인 패턴을 이용해 싱글톤으로 만들 수 있기는 하다. 이전  테스트 실패
+```
+public class DaoFactory {
+    private static final UserDao instance = new UserDao(new YConnectionMaker());
+
+    public UserDao userDao() {
+
+        return instance;
+    }
+```
+스프링을 통한 UserDao 생성 테스트
+getBean()메서드를 통해 얻어온 UserDao 객체가 동일한 객체
+```
+    @Test
+    public void appContextSingleTonTest(){
+        ApplicationContext context = new AnnotationConfigApplicationContext(
+            DaoFactory.class);
+
+        UserDao userDao1 = context.getBean("userDao",UserDao.class);
+        UserDao userDao2 = context.getBean("userDao",UserDao.class);
+        System.out.println("userDao1 = " + userDao1);
+        System.out.println("userDao2 = " + userDao2);
+        Assert.assertSame(userDao1,userDao2);
+    }
+```
+## 1.6.1 싱글톤 레지스트리로서의 애플리케이션 컨텍스트
+스프링의 애플리케이션 컨텍스트는 싱글톤 레지스트리이다.
+별다른 설정을 하지 않으면 생성하는 빈(오브젝트)는 모두 싱글톤을 유지한다. 여러 스레드에서
+하나의 오브젝트를 공유해 동시에 사용함. 즉, 생성되는 오브젝트는 변환되는 상태값을 갖으면 안된다.
+
+### 자바에서 싱글톤의 한계
+1. private 생성자를 갖고 있기 때문에 상속 불가
+    싱글톤으로 만들어진 객체는 하나의 인스턴스를 유지하기 위하여 객체 내부적으로 static이 붙은 객체(Instance)를 생성한다.
+    즉, 생성자를 private를 사용하여 getInstance() 메서드로만 객체를 사용하도록 강제하기 때문에 상속을 이용할 수 없다.
+2. 싱글톤 객체는 테스트하기가 어렵다.
+    싱글톤은 초기화 과정에서 생성자 등을 통해 사용할 오브젝트를 다이내믹하게 주입하기도 힘들기 때문에 펼요한 오브젝트는 직접 오브젝트 
+    를 만들어 사용할 수밖에 없다.
+3. 서버환경에서는 싱글톤이 하나만 만들어지는 것을 보장하지 못한다.
+    여러 개의 JVM에 분산돼서 설치가 되는 경우에도 각각 독립적으로 오브젝트가 생기기 때문에 싱글톤으로서의 가치가떨어진다.
+4. 싱글톤의 사용은 전역 상태를 만들 수 있기 때문에 바람직하지 못하다
+     아무 객체나 자유롭게 접근하고 수정하고 공유할 수 있는 전역 상태를 갖는 것은 객체지향 프로그래밍에서는 권장되지 않는 프로그래밍 모델이다.
+ 
