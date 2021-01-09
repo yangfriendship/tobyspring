@@ -70,5 +70,4 @@ public class UserDaoTest {
         Assert.assertSame(userDao1,userDao2);
     }
 
-
 }

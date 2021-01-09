@@ -405,5 +405,101 @@ UserDaoTest(클라이언트)가 UserDao라는 의존객체를 getBean()을 통�
 어플리케이션 컨텍스트에게 DI를 받도록 설정하려면, 의존객체를 필요로 하는 객체 또한 컨텍스트가 관리하는 Bean으로 등록되어야 한다.
 하지만 DL을 통해 의존 객체를 능동적으로 검색하여 사용한다면, `Bean으로 등록되지 않아도 된다`.
 
+## 1.7.4 의존관계 주입의 응용
+객체지향 설계와 프로그래밍의 원칙을 따랐을 때 얻을 수 있는 장점
+1. 코드에는 런타임 클래스에 대한 의존관계가 나타나지 않는다.
+2. 인터페이스를 이용하여 의존도가 낮은 코드를 작성할 수 있다.
+3. 다른 책임을 가진 시용 의존관계에 있는 대상이 바뀌거나 변경되더라도 자신은 영향을 받지 않는다.
+4. 변경을 통한 다양한 확장방법에 지유롭다.
 
+부가기능을 추가하기 쉽다.
+UserDao의 관심사는 DB Connection이 아니다. Connection과 UserDao의 책임을 완전히 분리했기 때문에
+이런식의 Connection에 부가기능을 추가할 수 있고, 두 객체의 결합도가 낮기 때문에 Connection객체의 변화가 Dao에 영황을 주지 않는다.
+```
+public class CountingConnectionMaker implements ConnectionMaker {
+
+    private int count = 0;
+    private ConnectionMaker connectionMaker;
+
+    public CountingConnectionMaker(ConnectionMaker connectionMaker) {
+        this.connectionMaker = connectionMaker;
+    }
+
+    public void setConnectionMaker(ConnectionMaker connectionMaker) {
+        this.connectionMaker = connectionMaker;
+    }
+
+    @Override
+    public Connection makeConnection() throws ClassNotFoundException, SQLException {
+        this.count++;
+        return connectionMaker.makeConnection();
+    }
+
+    public int getCount() {
+        return this.count;
+    }
+}
+```
+CountingConnectionMaker는 ConnectionMaker의 다른 구현체를 주입받음으로써 기존 기능뿐만 아니라
+추가된 counting기능까지 사용할 수있다. ConnectionMaker를 의존객체로 사용하는 클라이언트 객체에 변화된 CountingConnectionMaker를
+주입하도록 설정하기도 매우 간단하다.
+```
+    @Bean
+    public UserDao userDao() {
+        UserDao userDao = new UserDao(countingConnectionMaker());
+        return userDao;
+    }
+
+    @Bean
+    public ConnectionMaker connectionMaker() {
+        return new YConnectionMaker();
+    }
+
+    @Bean
+    public ConnectionMaker countingConnectionMaker(){
+        return new CountingConnectionMaker(connectionMaker());
+    }
+```
+
+## 1.7.5 메소드를 이용한 의존관계 주입
+1. 생성자(Constructor) 주입
+생성자를 통해서 의존객체를 주입 받는다. 생성자가 아닌 다른 메서드를 만들어서 주입해도 상관 없다.
+```
+public class UserDao {
+
+    private ConnectionMaker connectionMaker;
+
+    public UserDao(ConnectionMaker connectionMaker) {
+        this.connectionMaker = connectionMaker;
+    }
+```
+```
+    @Bean
+    public UserDao userDao() {
+        UserDao userDao = new UserDao(connectionMaker());
+        return userDao;
+    }
+```
+2. 수정자(Setter) 주입
+Setter메서드를 통하여 의존객체를 주입받는 방식
+    - Test를 하기 용이하다.
+    - 꼭 필요한 의존객체 주입을 하나씩 주입하기 때문에,필요한 객체의 수가 많아지면 실수할 가능성이 있다.
+    - 모든 파라미터를 한 번에 받는 생성자 주입보다 낫다고 한다.
+```
+public class UserDao {
+
+    private ConnectionMaker connectionMaker;
+
+    public void setConnectionMaker(ConnectionMaker connectionMaker) {
+        this.connectionMaker = connectionMaker;
+    }
+```
+```
+    @Bean
+    public UserDao userDao() {
+        UserDao userDao = new UserDao();
+        userDao.setConnectionMaker(connectionMaker());
+        return userDao;
+    }
+```
  
