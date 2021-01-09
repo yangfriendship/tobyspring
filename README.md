@@ -548,5 +548,47 @@ GenericXmlApplicationContext에 클래스패스에 대한 힌트를 제공할 �
 ```
  ApplicationContext context = new ClassPathXmlApplicationContext([xml이있는패키지의클래스.class],"applicationContext.xml");
 ```
+## 1.8.3 DataSource 인터페이스로 변환
 
- 
+1. DataSource인터페이스를 사용하도록 변경, 생성자를 통해서 DataSource구현체를 주입받는다.
+```
+public class UserDao {
+
+    private DataSource dataSource;
+
+    public void setDataSource(DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
+    public void add(User user) throws ClassNotFoundException, SQLException {
+        Connection c = dataSource.getConnection();
+        ...
+    }
+    public User get(String id) throws ClassNotFoundException, SQLException {
+        Connection c = dataSource.getConnection();
+        ...
+    }
+}
+```
+
+2. 자바 코드 방식
+필요한 4개의 값을 넣어주면 된다.(DriverClass, Url, UserName,Password)
+```
+    @Bean
+    public DataSource dataSource() {
+        SimpleDriverDataSource dataSource = new SimpleDriverDataSource();
+        dataSource.setDriverClass(Driver.class);    //H2Driver
+        dataSource.setUrl("jdbc:h2:tcp://localhost/~/test");
+        dataSource.setUsername("sa");
+        dataSource.setPassword("");
+        return dataSource;
+    }
+```
+3. Xml을 이용한 방식
+```
+  <bean id="dataSource" class="org.springframework.jdbc.datasource.SimpleDriverDataSource">
+    <property name="driverClass" value="org.h2.Driver" />
+    <property name="url" value="jdbc:h2:tcp://localhost/~/test" />
+    <property name="username" value="sa" />
+    <property name="password" value="" />
+  </bean>
+```
