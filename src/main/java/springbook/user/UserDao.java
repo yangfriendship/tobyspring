@@ -1,12 +1,11 @@
 package springbook.user;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-public class UserDao {
+public abstract class UserDao {
 
     public void add(User user) throws ClassNotFoundException, SQLException {
         Connection c = getConnection();
@@ -21,12 +20,6 @@ public class UserDao {
 
         ps.close();
         c.close();
-    }
-
-    private Connection getConnection() throws ClassNotFoundException, SQLException {
-        Class.forName("org.h2.Driver");
-        return DriverManager.getConnection(
-            "jdbc:h2:tcp://localhost/~/test", "sa", "");
     }
 
     public User get(String id) throws ClassNotFoundException, SQLException {
@@ -49,5 +42,7 @@ public class UserDao {
         c.close();
         return user;
     }
+
+    public abstract Connection getConnection() throws ClassNotFoundException, SQLException;
 
 }

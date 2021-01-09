@@ -14,7 +14,7 @@
         Connection c = DriverManager.getConnection(
             "jdbc:h2:tcp://localhost/~/test", "sa", "");
 ```
-메서드로 추출(extract method)
+메서드로 추출(`extract method`)
 ```
     private Connection getConnection() throws ClassNotFoundException, SQLException {
         Class.forName("org.h2.Driver");
@@ -23,3 +23,29 @@
     }
 ```
 
+## 1.2.3
+### DB connection 관심사를 상속을 통하여 분리
+```
+public abstract class UserDao {
+    public abstract Connection getConnection() throws ClassNotFoundException, SQLException;
+    /*
+    * 기존의 add/get Mehtod 생략
+    */
+}
+```
+슈퍼 클래스에서 기본적의 로직의 흐름(sql생성,리소스반환 등)을 처리하고
+서브 클래스에서 이런 메서드를 필요에 맞게 구현해서 사용하도록 하는 방식을
+템플릿 메소드 패턴(`template method pattern`) 이라고 한다.
+```
+public class YUserDao extends UserDao {
+    public Connection getConnection() throws ClassNotFoundException, SQLException {
+        Class.forName("org.h2.Driver");
+        return DriverManager.getConnection(
+            "jdbc:h2:tcp://localhost/~/test", "sa", "");
+    }
+}
+```
+현재와 같이 서브클래스에서 구체적인 오브젝트 생성 방법을 결정하게 하는 것을
+팩토리 메서드 패턴(`factory method pattern`)이라고 한다.
+서브클래스(YUserDao)에서 Connection 생성에 대한 메서드를 설정하고, 슈퍼클래스(USerDao)에 정의된
+구체적인 로직을 이용한다.
