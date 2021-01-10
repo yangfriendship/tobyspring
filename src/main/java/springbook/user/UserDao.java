@@ -6,7 +6,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import javax.sql.DataSource;
 import org.springframework.dao.EmptyResultDataAccessException;
-import springbook.user.strategy.AddStatement;
 import springbook.user.strategy.DeleteAllStatement;
 import springbook.user.strategy.StatementStrategy;
 
@@ -18,9 +17,19 @@ public class UserDao {
         this.dataSource = dataSource;
     }
 
-    public void add(User user) throws ClassNotFoundException, SQLException {
-        AddStatement stmt = new AddStatement(user);
-        jdbcContextWithStatementStrategy(stmt);
+    public void add(final User user) throws ClassNotFoundException, SQLException {
+        jdbcContextWithStatementStrategy(new StatementStrategy() {
+            @Override
+            public PreparedStatement makePreparedStatement(Connection connection)
+                throws SQLException {
+                PreparedStatement ps = connection.prepareStatement(
+                    "insert into users(id, name, password) values (?,?,?)");
+                ps.setString(1, user.getId());
+                ps.setString(2, user.getName());
+                ps.setString(3, user.getPassword());
+                return ps;
+            }
+        });
     }
 
     public User get(String id) throws ClassNotFoundException, SQLException {

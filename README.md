@@ -1011,3 +1011,57 @@ PreparedStatement를 생성하는 StatementStrategy구현체를 파라미터로 
         }
     ```
 클라이언트(add,deleteAll등 메서드)에게 PreparedStatement를 `전략오브젝트`(StatementStrategy)를 넘겨받고 `컨텍스트`부분에서 핵심로직을 처리한다.
+`컨텍스트`가 사용할 `전략오브젝트`를 `클라이언트`에게 일종의 DI를 이용한 방법이다.
+
+## 3.3 JDBC 전략 패턴의 최적화
+컨텍스트   : PreparedStatement를 실행하는 JDBC의 흐름
+전략      : PreparedStatement를 생성
+
+## 3.3.2 전략과 클라이언트의 동거
+현재 UserDao에서 컨텍스트와 전략을 분리해서 사용하고 있지만 아직 문제가 있다. 
+1. Dao 메서드마다 StatementStrategy를 구현한 클래스를 만들어야 하므로, 클래스 파일이 늘어난다.
+2. add()메서드 처럼 부가적으로 파라미터를 받아야 하는 경우에 파라미터를 전달받는 생성자를 따로 만들어야 하는 문제
+
+### 1번 문제 해결 방법 : `로컬 클래스`를 이용한다.
+```
+          public void add(final User user) throws ClassNotFoundException, SQLException {
+                     class AddStatement implements StatementStrategy {
+                         @Override
+                         public PreparedStatement makePreparedStatement(Connection connection)
+                             throws SQLException {
+                             PreparedStatement ps = connection.prepareStatement(
+                                 "insert into users(id, name, password) values (?,?,?)");
+                             ps.setString(1, user.getId());
+                             ps.setString(2, user.getName());
+                             ps.setString(3, user.getPassword());
+                             return ps;
+                         }
+                     }
+                     AddStatement stmt = new AddStatement();
+                     jdbcContextWithStatementStrategy(stmt);
+                 }
+```
+내부 클래스의 장점
+1. 해당 메서드 내부에 정의되기 때문에 add()메서드의 user객체에 바로 접근가능하다.
+    내부 클래스에서 자신이 정의된 클래스의 외부 데이터에 접근하려면 `final`을 추가해야한다. 
+    ```
+   public void add(final User user) 
+   ```
+### 1번 문제 해결 방법 : `익명 내부 클래스`를 이용한다.
+`컨텍스트`(jdbcContextWithStatementStrategy)에 바로 익명 클래스를 파라미터로 넘기도록 만든다.
+```
+    public void add(final User user) throws ClassNotFoundException, SQLException {
+        jdbcContextWithStatementStrategy(new StatementStrategy() {
+            @Override
+            public PreparedStatement makePreparedStatement(Connection connection)
+                throws SQLException {
+                PreparedStatement ps = connection.prepareStatement(
+                    "insert into users(id, name, password) values (?,?,?)");
+                ps.setString(1, user.getId());
+                ps.setString(2, user.getName());
+                ps.setString(3, user.getPassword());
+                return ps;
+            }
+        });
+    }
+```
