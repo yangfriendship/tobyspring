@@ -1,6 +1,7 @@
 # Toby Spring vol.1
 토비의 스프링 vol.1 2회차
 
+# 1장
 ## 1.2.1~ 1.2.2
 ### UserDao의 관심사 및 분리
 1. DB와 연결을 위한 컨넥션
@@ -592,3 +593,136 @@ public class UserDao {
     <property name="password" value="" />
   </bean>
 ```
+
+# 2장 테스트 
+## 2.1.1 테스트의 유용성
+테스트 : 예상하고 의도했던 대로 코드가 정확히 동작하는지를 확인해서 만든 코드를 확신할 수 있게 해주는 작업이다.
+테스트를 통해서 코드 설계에 결함이 있음을 알 수 있다. 최종적으로 테스트가 성공하면 결함이 제거 됐음을 알 수 있다.
+
+### 작은 단위의 테스트
+테스트 역시 관심사 분리의 원리를 이용하여 대상을 분리하고 접근해야 한다. 이렇게 작은 단위로 테스트 하는 것을 `단위테스트`라고 한다.
+단위 테스트는 주로 개발자가 만든 코드를 스스로 확인하는데 사용하기 때문에 이를 `개발자 테스트` 또는 `프로그래머 테스트
+라고도 한다.
+
+### JUnit 프레임워크
+사실상 자바 표준으로 여겨지고 있는 테스트 프레임워크, Spring Test 모듈도 JUnit을 이용한다.
+JUnit 프레임 워크의 두 가지 조건
+1. 모든 메서드는 public이여야 한다.
+2. 테스트 메서드에 @Test 애노테이션을 붙여줘야 한다.
+JUnit은 한 클래스 내에 있는 메서드를 부가적인 설정이 되어있지 않다면 실행 순서를 보장해주지 않는다.
+
+## 2.3.2 ~ 2.3.4  테스트 결과의 일관성
+원활한 테스트를 위해서 users 테이블 초기화를 위해 `deleteAll()`과 `getCount()`메서드를 추가 했다.
+각 테스트를 수행할 때 DB를 초기화하기 위해서 추가했다.
+기존의 DB table에서 primary Key가 설정되어 있지 않아서 테이블을 초기화하지 않고도 테스트를 진행할 수 있었지만
+PK가 설정되어 있었다면 매번 테스트를 진행하기 전에 테이블을 초기화 해야한다.
+- 추가된 deleteAll,getCount 메서드
+```
+    public void deleteAll() throws SQLException {
+        Connection c = dataSource.getConnection();
+
+        PreparedStatement ps = c
+            .prepareStatement("delete from users");
+        ps.executeUpdate();
+
+        ps.close();
+        c.close();
+    }
+
+    public int getCount() throws SQLException {
+        Connection c = dataSource.getConnection();
+
+        PreparedStatement ps = c
+            .prepareStatement("select count(*) from users");
+        ResultSet rs = ps.executeQuery();
+        rs.next();
+        int count = rs.getInt(1);
+
+        rs.close();
+        ps.close();
+        c.close();
+        return count;
+    }
+``` 
+- getCount()메서드 테스트
+```
+    @Test
+    public void countTest() throws SQLException, ClassNotFoundException {
+        userDao.add(new User("1","name1","ps1"));
+        Assert.assertTrue(userDao.getCount() == 1);
+
+        userDao.add(new User("2","name2","ps2"));
+        Assert.assertTrue(userDao.getCount() == 2);
+
+        userDao.add(new User("3","name3","ps3"));
+        Assert.assertTrue(userDao.getCount() == 3);
+    }
+```
+- AddAndGetTest : User 추가한 후 값을 다시 가져오는 테스트
+```
+    @Test
+    public void addAndGetTest() throws SQLException, ClassNotFoundException {
+        userDao.deleteAll();
+        Assert.assertTrue(userDao.getCount() == 0);
+
+        userDao.add(this.user);
+        Assert.assertTrue(userDao.getCount() == 1);
+
+        User user2 = new User("2", "name2", "ps2");
+        userDao.add(user2);
+        Assert.assertTrue(userDao.getCount() == 2);
+
+        User find = userDao.get(this.user.getId());
+        Assert.assertEquals(this.user.getId() , find.getId());
+        Assert.assertEquals(this.user.getName() , find.getName());
+        Assert.assertEquals(this.user.getPassword() , find.getPassword());
+
+        User find2 = userDao.get(user2.getId());
+        Assert.assertEquals(user2.getId() , find2.getId());
+        Assert.assertEquals(user2.getName() , find2.getName());
+        Assert.assertEquals(user2.getPassword() , find2.getPassword());
+
+        userDao.deleteAll();
+        Assert.assertTrue(userDao.getCount() == 0);
+    }
+```
+- get()메서드가 실패할 경우(해당 Id가 존재하지 않음) Exception을 던지도록 설정
+```
+    public User get(String id) throws ClassNotFoundException, SQLException {
+        // Connecton ~ Sql 생략
+        ResultSet rs = ps.executeQuery();
+
+        User user = null;
+        if (rs.next()) {
+            user = new User();
+        //user에 찾은 값 set 생략
+        }
+        // 리소스 반환 생략
+        if(user == null ){
+            throw new EmptyResultDataAccessException(1);
+        }
+        return user;
+    }
+``` 
+- 수정된 get()메서드 테스트
+@Test 애노테이션 옆에 예상하는 Exception.class를 설정해주면 된다.
+```
+    @Test(expected = EmptyResultDataAccessException.class)
+    public void getNotFountExceptionTest() throws SQLException, ClassNotFoundException {
+        //given
+        userDao.deleteAll();
+        Assert.assertTrue(userDao.getCount() == 0);
+
+        //when 
+        User find = userDao.get("이상한Id값");
+        //then
+    }
+```
+테스트는 항상 부정적인 실패를 염두하는 식으로 작성해야한다. 일반적으로 성공하는 테스트를 작성하기 쉽다. 초록막대기 보는 쾌감이 문제다 문제..
+책에서는 테스트 코드를 먼저 작성한 후, 테스트가 실패하는 것을 확인한 후, UserDao의 get()을 수정했다.
+이러한 개발 방식을 TDD이라고 한다.
+TDD는 `실패한 테스트를 성공시키기 위한 목적이 아닌 코드는 만들지 않는다`라는 원칙을 갖고 만든다.
+테스트 코드를 작성하는 요령
+- 조건(given) : 어떠한 조건이 주어졌는가? -> userdao.deleteAll(),
+- 행위(when)  : 무엇을 할 때?  -> User find = userDao.get("이상한Id값");
+- 결과(then)  : 어떤 결과가 나온다 -> @Test(expected = EmptyResultDataAccessException.class)
