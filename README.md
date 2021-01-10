@@ -780,4 +780,142 @@ TDD는 `실패한 테스트를 성공시키기 위한 목적이 아닌 코드는
           this.user3 = new User("3`", "yang", "ps3");
       }
     ```
-  
+## 2.4.1 테스트를 위한 애플리케이션 컨텍스트 관리
+
+```
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(locations = "/applicationContext.xml")
+public class UserDaoTest {
+    @Autowired
+    private UserDao userDao;
+    ...
+```
+UserDaoTest에 두 개의 애노테이션을 추가한다.
+- @RunWith(SpringJUnit4ClassRunner.class)
+    JUnit 프레임워크를 확장시키기 위한 애너테이션
+- @ContextConfiguration(locations = "/applicationContext.xml")
+    적용할 applicationContext 설정이 있는 xml위치를 설정하는 애노테이션이다.
+    `locations`대신 `classes`를 적용하면 자바코드로 설정도 적용할 수 있다.(Spring3.1이상)
+- @Autowired
+    @Autowired를 통해서 ApplicationContext 설정에 등록된 UserDao.class를 가져온다.
+    Type을 기준으로 가져오고 비슷한 애노테이션으로 `@Resource`가 있는데 이 애노테이션은 등록된 Bean의 이름을 기준으로 DI를 해준다.
+
+## 2.4.2 DI와 테스트
+DI를 할 때눈 항상 Interface를 사용해야한다. 해당 인터페이스를 구현한 구현 클래스를 DI해도 되지만 아래와 같은 이유로 인터페이스 DI를 권장한다고 한다.
+1. 소프트웨어 개발에서 절대로 바뀌지 않는 것은 없기 때문이다.
+    인터페이스를 이용한 DI는 나중에 혹시모르게 생길 변경에 시간과 비용 부담을 줄여준다.
+    즉, 변화에 대응하기가 용이하다.
+2. 클래스의 구현 방식은 바뀌지 않는다고 하더라도 인터페이스를 두고 DI를 적용하게 해두면 다른 차원의 서비스 기능을 도입할 수 있기 때문이다.
+    새로운 기능을 추가하더라도 기존 코드는 수정할 필요가 없다.
+3. 테스트
+    테스느는 자동으로 실행되며 빠르게 할 수 있어야한다. 또한 테스트 범위는 되도록 작아야한다.
+    DI는 테스트가 작은 단위로 독립적으로 실행되도록 도와준다.
+### 테스트코드에 의한 DI
+테스트 클래스에서 등록될 Bean을 조작할 수 있다. 예를 들어서 applicationContext.xml에는 h2DB에 접속하도록 설정되어있는 DadaSource가 등록되어있다.
+하지만 테스트하는 도중에 다른 DataSource를 주입하도록 설정할 수 있다.
+- @DirtiesContext
+    `@DirtiesContext` 애노테이션을 설정하면 JUnit에게 다른 applicationContext설정을 사용할 것이라고 알려주는 것이다.
+    applicationContext에 설정된 Bean 의존 관계를 강제적으로 바꾸는 것이 가능하다. 
+    ```
+    @RunWith(SpringJUnit4ClassRunner.class)
+    @ContextConfiguration(locations = "/applicationContext.xml")
+    @DirtiesContext
+    public class UserDaoTest {
+    ```
+    class단에 추가한다면 해당 클래스 모든 테스느 메서드의 설정에 대해서 Bean의존 관계가 변견된다.
+    method상단에 붙이는 것을 추천한다.
+    강제로 setter메서드를 이용해서 의존관계를 바꾸는 것이 아니다.
+- @DirtiesContext 테스트
+
+사실 이해를 다 못해서 직접 실험해봤다.
+- 테스트를 위한 객체
+    SayObject는 TestInterface say()메서드를 이용해서 메세지를 출력한다. 간단한 의존관계를 설계하고 실험했다.
+    TestInterface는 A와 B라는 두 개의 구현체가 있다.
+    ```
+    public class SayObject {
+    
+        private TestInterface testInterface;
+    
+        public void setTestInterface(TestInterface testInterface) {
+            this.testInterface = testInterface;
+        }
+    
+        public void say() {
+            testInterface.say();
+        }
+    
+    }
+    
+    public interface TestInterface {
+    
+        public void say();
+    
+    }
+    
+    public class ATestImpl implements TestInterface {
+    
+        @Override
+        public void say() {
+            System.out.println("ATestImpl");
+        }
+    }
+    
+    public class BTestImpl implements TestInterface {
+    
+        @Override
+        public void say() {
+            System.out.println("BTestImpl");
+        }
+    }
+    ```
+    - applicationContext.xml에 추가
+    ```
+      <bean id="testInterface" class="springbook.temp.ATestImpl"/>
+      <bean id="sayObejct" class="springbook.temp.SayObject">
+        <property name="testInterface" ref="testInterface"/>
+      </bean>
+    ```
+    - Test코드는 아래와 같다.
+    ```
+        @Test
+        @DirtiesContext
+        public void test() {
+            sayObject.setTestInterface(new BTestImpl());
+            System.out.println(1);
+            sayObject.say();
+        }
+    
+        @Test
+        public void test2() {
+            System.out.println(2);
+            sayObject.say();
+        }
+    ```
+    - result message
+    ```
+    1
+    BTestImpl
+    2
+    ATestImpl
+    ```
+    테스트의 순서는 보장되지 않지만 일단 테스트를 돌려봤다.
+    test1()메서드에서 의존 관계를 강제를 A에서 B로 변경했지만 test2()가 테스트 될 때는 다시 .xml에 설정된 의존관계로 바뀌는 것을 볼 수 있다.
+    test1()의 @DirtiesContext를 제거하고 테스트를 돌리면 test1에서 강제로 바꿨던 의존관계가 test2까지 영향을 미친다.
+    ```
+    1
+    BTestImpl
+    2
+    BTestImpl
+    ```
+    @DirtiesContext가 붙어있는 테스트만 의존관계를 변경하고 다른 테스트에는 변경된 의전관계 설정을 적용하지 않게 하게하는 기능이다.
+    독립적인 테스트를 진행시켜주는 설정!
+### 테스트를 위한 별도의 DI 설정
+테스트를 위한 xml 설정파일을 만드는 것도 좋은 방법인데 생략한다.
+
+### 컨테이너 없는 DI 테스트
+DI는 프레임워만의 기술이 아니다. 자바 객체지향 프로그램의 한 가지 기술이기 때문에 프레임워크에 종속적일 필요가 없다.
+굳이 @RunWith()애노테이션을 붙여서 스프링 컨텍스트에 연결할 필요없이 그냥 직접 객체들 간 의존설정을 해서 테스트를 진행해도 된다.
+직접 DI를 해서 테스트를 진행한다면 Spring Application이 생성되는 만큼의 시간이 절약되서 가볍고 빠른 테스트를 진행할 수 있다.
+물론 직접 DI를 해줘야하는 불편함도 있다.
+
+

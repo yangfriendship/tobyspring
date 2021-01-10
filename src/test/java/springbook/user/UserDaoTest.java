@@ -5,15 +5,26 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.GenericXmlApplicationContext;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import springbook.temp.BTestImpl;
+import springbook.temp.SayObject;
+import springbook.temp.TestInterface;
 
-
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(locations = "/applicationContext.xml")
 public class UserDaoTest {
 
+    @Autowired
     private UserDao userDao;
     private ApplicationContext context;
+
 
     private User user1;
     private User user2;
@@ -23,8 +34,6 @@ public class UserDaoTest {
     public void setUp() {
         this.context = new GenericXmlApplicationContext(
             "applicationContext.xml");
-        this.userDao = this.context.getBean("userDao", UserDao.class);
-
         this.user1 = new User("1", "youzheng", "ps1");
         this.user2 = new User("2", "woojung", "ps2");
         this.user3 = new User("3`", "yang", "ps3");
