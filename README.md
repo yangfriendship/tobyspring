@@ -1065,3 +1065,59 @@ PreparedStatement를 생성하는 StatementStrategy구현체를 파라미터로 
         });
     }
 ```
+
+## 3.4.1 JdbcContext의 분리
+Dao와 컨텍스트 역시 분리할 수 있다. 관심사가 다르기 때문
+- JdbcContext 클래스 생성
+    ```
+    public class JdbcContext {
+    
+        private DataSource dataSource;
+    
+        public void setDataSource(DataSource dataSource) {
+            this.dataSource = dataSource;
+        }
+    
+        public void workWithStatementStrategy(StatementStrategy stmt) throws SQLException {
+          
+         //... 생략
+    }
+    ``` 
+- UserDao에서 JdbcContext를 주입받을 수 있도록 변경
+add()메서드를 제외한 다른 메서드는 적용하지 않았기에 DataSource도 주입받아야 한다.
+    ```
+    public class UserDao {
+    
+        private JdbcContext jdbcContext;
+    
+        public void setJdbcContext(JdbcContext jdbcContext) {
+            this.jdbcContext = jdbcContext;
+        }
+        //.. 생략
+        public void add(final User user) throws ClassNotFoundException, SQLException {
+            this.jdbcContext.workWithStatementStrategy(new StatementStrategy() {
+                @Override
+                public PreparedStatement makePreparedStatement(Connection connection)
+                    throws SQLException {
+                    PreparedStatement ps = connection.prepareStatement(
+                        "insert into users(id, name, password) values (?,?,?)");
+                    ps.setString(1, user.getId());
+                    ps.setString(2, user.getName());
+                    ps.setString(3, user.getPassword());
+                    return ps;
+                }
+            });
+        }
+    ```
+- applicationContext.xml 변경
+    ```
+    <bean id="userDao" class="springbook.user.UserDao">
+      <property name="dataSource" ref="dataSource"/>
+      <property name="jdbcContext" ref="jdbcContext" />
+    </bean>
+  
+    <bean id="jdbcContext" class="springbook.user.strategy.JdbcContext">
+      <property name="dataSource" ref="dataSource"/>
+    </bean>
+  ```
+으로 등록되므로, UserDao를 생성하는 과정에서 대신 DI를 받을 수 있다.

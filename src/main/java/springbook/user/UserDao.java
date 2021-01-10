@@ -7,18 +7,24 @@ import java.sql.SQLException;
 import javax.sql.DataSource;
 import org.springframework.dao.EmptyResultDataAccessException;
 import springbook.user.strategy.DeleteAllStatement;
+import springbook.user.strategy.JdbcContext;
 import springbook.user.strategy.StatementStrategy;
 
 public class UserDao {
 
     private DataSource dataSource;
+    private JdbcContext jdbcContext;
 
     public void setDataSource(DataSource dataSource) {
         this.dataSource = dataSource;
     }
 
+    public void setJdbcContext(JdbcContext jdbcContext) {
+        this.jdbcContext = jdbcContext;
+    }
+
     public void add(final User user) throws ClassNotFoundException, SQLException {
-        jdbcContextWithStatementStrategy(new StatementStrategy() {
+        this.jdbcContext.workWithStatementStrategy(new StatementStrategy() {
             @Override
             public PreparedStatement makePreparedStatement(Connection connection)
                 throws SQLException {
@@ -61,7 +67,7 @@ public class UserDao {
 
     public void deleteAll() throws SQLException {
         DeleteAllStatement statement = new DeleteAllStatement();
-        jdbcContextWithStatementStrategy(statement);
+        jdbcContext.workWithStatementStrategy(statement);
     }
 
     public int getCount() throws SQLException {
@@ -79,30 +85,4 @@ public class UserDao {
         return count;
     }
 
-    private void jdbcContextWithStatementStrategy(StatementStrategy stmt) throws SQLException {
-        Connection connection = null;
-        PreparedStatement ps = null;
-        try {
-            connection = dataSource.getConnection();
-
-            ps = stmt.makePreparedStatement(connection);
-
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            throw e;
-        } finally {
-            if (ps != null) {
-                try {
-                    ps.close();
-                } catch (SQLException e) {
-                }
-            }
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                }
-            }
-        }
-    }
 }

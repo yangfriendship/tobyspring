@@ -6,7 +6,13 @@
 
   <bean id="userDao" class="springbook.user.UserDao">
     <property name="dataSource" ref="dataSource"/>
+    <property name="jdbcContext" ref="jdbcContext" />
   </bean>
+
+  <bean id="jdbcContext" class="springbook.user.strategy.JdbcContext">
+    <property name="dataSource" ref="dataSource"/>
+  </bean>
+
 
   <bean id="dataSource" class="org.springframework.jdbc.datasource.SimpleDriverDataSource">
     <property name="driverClass" value="org.h2.Driver"/>
