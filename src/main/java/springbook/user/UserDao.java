@@ -6,6 +6,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import javax.sql.DataSource;
 import org.springframework.dao.EmptyResultDataAccessException;
+import springbook.user.strategy.AddStatement;
+import springbook.user.strategy.DeleteAllStatement;
+import springbook.user.strategy.StatementStrategy;
 
 public class UserDao {
 
@@ -16,18 +19,8 @@ public class UserDao {
     }
 
     public void add(User user) throws ClassNotFoundException, SQLException {
-        Connection c = dataSource.getConnection();
-        PreparedStatement ps = c.prepareStatement(
-            "insert into users(id, name, password) values (?,?,?)");
-
-        ps.setString(1, user.getId());
-        ps.setString(2, user.getName());
-        ps.setString(3, user.getPassword());
-
-        ps.executeUpdate();
-
-        ps.close();
-        c.close();
+        AddStatement stmt = new AddStatement(user);
+        jdbcContextWithStatementStrategy(stmt);
     }
 
     public User get(String id) throws ClassNotFoundException, SQLException {
@@ -51,21 +44,15 @@ public class UserDao {
         ps.close();
         c.close();
 
-        if(user == null ){
+        if (user == null) {
             throw new EmptyResultDataAccessException(1);
         }
         return user;
     }
 
     public void deleteAll() throws SQLException {
-        Connection c = dataSource.getConnection();
-
-        PreparedStatement ps = c
-            .prepareStatement("delete from users");
-        ps.executeUpdate();
-
-        ps.close();
-        c.close();
+        DeleteAllStatement statement = new DeleteAllStatement();
+        jdbcContextWithStatementStrategy(statement);
     }
 
     public int getCount() throws SQLException {
@@ -83,4 +70,30 @@ public class UserDao {
         return count;
     }
 
+    private void jdbcContextWithStatementStrategy(StatementStrategy stmt) throws SQLException {
+        Connection connection = null;
+        PreparedStatement ps = null;
+        try {
+            connection = dataSource.getConnection();
+
+            ps = stmt.makePreparedStatement(connection);
+
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw e;
+        } finally {
+            if (ps != null) {
+                try {
+                    ps.close();
+                } catch (SQLException e) {
+                }
+            }
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException e) {
+                }
+            }
+        }
+    }
 }

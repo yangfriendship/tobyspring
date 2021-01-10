@@ -10,16 +10,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.GenericXmlApplicationContext;
 import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import springbook.temp.BTestImpl;
-import springbook.temp.SayObject;
-import springbook.temp.TestInterface;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = "/applicationContext.xml")
 public class UserDaoTest {
+
+
 
     @Autowired
     private UserDao userDao;
@@ -43,6 +41,8 @@ public class UserDaoTest {
     public void reset() throws SQLException {
         userDao.deleteAll();
     }
+
+
 
     @Test
     public void addTest() throws SQLException, ClassNotFoundException {

@@ -918,4 +918,96 @@ DI는 프레임워만의 기술이 아니다. 자바 객체지향 프로그램�
 직접 DI를 해서 테스트를 진행한다면 Spring Application이 생성되는 만큼의 시간이 절약되서 가볍고 빠른 테스트를 진행할 수 있다.
 물론 직접 DI를 해줘야하는 불편함도 있다.
 
+# 템플릿
+탬플릿 : 바뀌는 성질이 다른 코드 중에서 변경이 거의 일어나지 않으며 일정한 패턴으로 유지되는 특성을 가진 부분을 자유롭게 변경되는 성질을 가진 부분으 
+로부터 독립시켜서 효과적으로 활용할 수 있도록 하는 방법이다.
 
+## 3.1.1 예외처리 기능을 갖춘 DAO
+이전에 만들었던 UserDao에는 예외처리가 되어있지 않다. JDBC를 사용하는 과정에서 예외가 발생했더라도 
+사용하고 있던 `한정된`리소스는 꼭 반환해야 한다.
+일반적으로 close()로 되어있는 메서드들은 리소스반납을 하기 위한 메서드이다.
+PreparedStatement, Connection,ResultSet에 close()메서드를 이용해서 해당 자원을 반납할 수 있다.
+하지만 해당 메서드들도 SqlException이 발생할 수 있기에 자원 반납을 위해서는 try catch블럭으로 예외에 대응하면서 반납해야한다.
+자원을 반납하는 순서는 가져온 순서의 반대로 반납한다.
+
+## 3.2.2
+복잡한 try~catch 블럭에서 변하지 않는 부분과 변하는 부분을 분리한다.
+1. 변하지 않는 부분
+    - 자원을 가져오는 부분
+    - 자원을 반납하는 부분
+2. 변하는 부분
+    - Sql Query
+    - Result를 처리하는 부분
+
+### 템플릿 메소드 패턴의 적용
+```
+    public class UserDaoDeleteAll extends UserDao {
+        protected PreparedStatement makeStatement(Connection c) throws SQLException {
+            PreparedStatement ps = c.prepareStatement("delete from users");
+            return ps;
+        }
+    }
+```
+템플릿 메서드 패턴 : 변하지 않는 부분은 슈퍼클래스에 두고 변하는 부분은 추상 메소드로 정의해둬서 서브클래스에서 재구현하는 방법
+Connection을 이용해서 PreparedStatement를 가져오는 부분이 변하는 부분이다.
+그러므로 PreparedStatement를 추상 메서드로 만들고, 서브클래스에서 구현하도록 설정할 수 있다.
+하지만, 템플릿 메서드 패턴는 여러가지로 단점이 있다. 가장 큰 이유로는 현재 UserDao를 구현하기 위해서 
+템플릿 메서드 패턴을 적용한다면 각 로직(deleteAll,add등등)에 맞게 새로운 클래스를 만들어야 한다.  
+또한 확장구조가 이미 클래스를 설계하는 시점에서 고정되어 버린다는 단점이 있다
+
+### 전략패턴의적용
+전략패턴 : 오브젝트를 둘로 분리하고 클래스 레벨에서는 인터페이스를 통해서만 의존하도록 만드는 전략
+아래와 같이 PreparedStatement를 얻어오는 부분을 구현할 인터페이스로 지정해준다.
+```
+    public interface StatementStrategy {
+        PreparedStatement makePreparedStatement(Connection c) throws SQLException;
+    }
+```
+하지만 여러개의 로직이 담겨 있는 UserDao에서 각 메서드들이 서로다른  StatementStrategy의 구현체를 사용한다면
+new DeleteAllStatementStrategy();, new AddStatementStrategy();등등 정확하게 구현체에 대해서 알고 있어야 한다.
+전력 패턴 또한 OCP에도 잘 들어맞는다고 볼 수 없다.
+
+PreparedStatement를 생성하는 StatementStrategy구현체를 파라미터로 받고 로직을 처리하는 `컨텍스트`부분 메서드를 따로 분리한다.
+그리고 각 dao메서드에서 PreparedStatement를 호출한 후 `컨텍스트`에 해당하는 메서드에 오브젝트를 전달함으로써 로직을 수행한다.
+- jdbcContextWithStatementStrategy(컨텍스트)
+    ```
+     private void jdbcContextWithStatementStrategy(StatementStrategy stmt) throws SQLException {
+            Connection connection = null;
+            PreparedStatement ps = null;
+            try {
+                connection = dataSource.getConnection();
+    
+                ps = stmt.makePreparedStatement(connection);
+    
+                ps.executeUpdate();
+            } catch (SQLException e) {
+                throw e;
+            } finally {
+                if (ps != null) {
+                    try {
+                        ps.close();
+                    } catch (SQLException e) {
+                    }
+                }
+                if (connection != null) {
+                    try {
+                        connection.close();
+                    } catch (SQLException e) {
+                    }
+                }
+            }
+        }
+    ```
+- 변경된 add()와 deleteAll()
+    ```
+        public void add(User user) throws ClassNotFoundException, SQLException {
+            AddStatement stmt = new AddStatement(user);
+            jdbcContextWithStatementStrategy(stmt);
+        }
+    
+        public void deleteAll() throws SQLException {
+            DeleteAllStatement statement = new DeleteAllStatement();
+            jdbcContextWithStatementStrategy(statement);
+        }
+    ```
+클라이언트(add,deleteAll등 메서드)에게 PreparedStatement를 `전략오브젝트`(StatementStrategy)를 넘겨받고 `컨텍스트`부분에서 핵심로직을 처리한다.
