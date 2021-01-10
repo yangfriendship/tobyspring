@@ -1120,4 +1120,48 @@ add()메서드를 제외한 다른 메서드는 적용하지 않았기에 DataSo
       <property name="dataSource" ref="dataSource"/>
     </bean>
   ```
-으로 등록되므로, UserDao를 생성하는 과정에서 대신 DI를 받을 수 있다.
+### 인터페이스와 DI
+DI의 기본은 인터페이스를 이용한 주입이다. 스프링에서 DI란 Ioc의 개념도 포괄한다.
+클라이언트가 런타임 시점에 의존성을 주입해주는 것이 올바른 스프링의 DI
+
+### JdbcContext가 UserDao와 DI구조로 만들어져야하는 이유
+1.  JdbcContext가 스프링 컨테이너의 싱글톤 레지스트리에서 관리되는 싱글톤 빈이기 때문이다.
+    JdbcContext는 필드변수 등 데이터 값을 갖지 않는다. 싱글톤으로 설정하고 사용할 수 있다는 뜻이다.
+    DataSource 또한 읽기 전용이므로 JdbcContext가 싱글톤으로 사용되는데 전혀 문제가 없다.
+2. JdbcContext가 DI를 통해 다른 빈에 의존하고 있기 때문이다.
+    처음에는 이 부분이 이해가 가지 않았지만, 1장에서 DI와 DL부분을 다시 읽고 이해가 갔다.
+    Spring에게 의존객체를 주입받는 객체 또한 Spring Bean으로 등록되어야 한다.그러므로 Spring에게 DI를 받고 싶다면
+    JdbcContext도 Bean으로 등록되어 스프링이 생성 관리하는 Ioc대상이 되어야 한다. 매번 수동 DL을 할 수는 없다.
+
+## 코드를 통한 DI
+JdbcContext가 DataSource를 주입받으려면 스프링 컨텍스트가 관리하는 빈으로 등록되어야 한다.
+하지만 UserDao가 SpringBean으로 등록되므로, UserDao를 생성하는 과정에서 대신 DI를 받을 수 있다.
+JdbcContext를 필요로 하는 Dao의 숫자만큼 JdbcContext가 생성되지만, 성능에 크게 무리가 가지는 않는다고 한다.
+싱글톤으로 등록되는 Bean에게 사용되므로 사실상 Scope 역시 해당 객체의 스코프와 같고 볼 수 있다.
+- 수정된 UserDao
+```
+public class UserDao {
+
+    private DataSource dataSource;  //일단 살려둔다.
+    private JdbcContext jdbcContext;
+
+    public void setDataSource(DataSource dataSource) {
+        this.dataSource = dataSource;
+        this.jdbcContext = new JdbcContext(dataSource);
+    }
+// 변경된 applicationContext.xml
+// jdbcContext를 등록했던 빈을 제거
+      <bean id="userDao" class="springbook.user.UserDao">
+        <property name="dataSource" ref="dataSource"/>
+      </bean>
+```
+- 수정된 JdbcContext
+```
+    ```
+      private DataSource dataSource;
+  
+      public JdbcContext(DataSource dataSource) {
+          this.dataSource = dataSource;
+      }
+```
+

@@ -17,10 +17,7 @@ public class UserDao {
 
     public void setDataSource(DataSource dataSource) {
         this.dataSource = dataSource;
-    }
-
-    public void setJdbcContext(JdbcContext jdbcContext) {
-        this.jdbcContext = jdbcContext;
+        this.jdbcContext = new JdbcContext(dataSource);
     }
 
     public void add(final User user) throws ClassNotFoundException, SQLException {
