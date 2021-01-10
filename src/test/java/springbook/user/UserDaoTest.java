@@ -1,6 +1,7 @@
 package springbook.user;
 
 import java.sql.SQLException;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -14,7 +15,9 @@ public class UserDaoTest {
     private UserDao userDao;
     private ApplicationContext context;
 
-    private User user;
+    private User user1;
+    private User user2;
+    private User user3;
 
     @Before
     public void setUp() {
@@ -22,34 +25,37 @@ public class UserDaoTest {
             "applicationContext.xml");
         this.userDao = this.context.getBean("userDao", UserDao.class);
 
-        this.user = new User("1", "youzheng", "ps");
+        this.user1 = new User("1", "youzheng", "ps1");
+        this.user2 = new User("2", "woojung", "ps2");
+        this.user3 = new User("3`", "yang", "ps3");
+    }
+
+    @After
+    public void reset() throws SQLException {
+        userDao.deleteAll();
     }
 
     @Test
     public void addTest() throws SQLException, ClassNotFoundException {
-        userDao.deleteAll();
-        User user = new User("1", "name", "ps");
-        userDao.add(user);
+        userDao.add(user1);
 
-        User find = userDao.get(user.getId());
+        User find = userDao.get(user1.getId());
 
-        Assert.assertEquals(user.getId(), find.getId());
-        Assert.assertEquals(user.getName(), find.getName());
-        Assert.assertEquals(user.getPassword(), find.getPassword());
+        Assert.assertEquals(user1.getId(), find.getId());
+        Assert.assertEquals(user1.getName(), find.getName());
+        Assert.assertEquals(user1.getPassword(), find.getPassword());
 
     }
 
     @Test
     public void addTestWithContext() throws SQLException, ClassNotFoundException {
-        userDao.deleteAll();
-        User user = new User("1", "name", "ps");
-        userDao.add(user);
+        userDao.add(user1);
 
-        User find = userDao.get(user.getId());
+        User find = userDao.get(user1.getId());
 
-        Assert.assertEquals(user.getId(), find.getId());
-        Assert.assertEquals(user.getName(), find.getName());
-        Assert.assertEquals(user.getPassword(), find.getPassword());
+        Assert.assertEquals(user1.getId(), find.getId());
+        Assert.assertEquals(user1.getName(), find.getName());
+        Assert.assertEquals(user1.getPassword(), find.getPassword());
     }
 
     @Test
@@ -65,8 +71,6 @@ public class UserDaoTest {
     public void appContextSingleTonTest() {
         UserDao userDao1 = context.getBean("userDao", UserDao.class);
         UserDao userDao2 = context.getBean("userDao", UserDao.class);
-        System.out.println("userDao1 = " + userDao1);
-        System.out.println("userDao2 = " + userDao2);
         Assert.assertSame(userDao1, userDao2);
     }
 
@@ -75,17 +79,16 @@ public class UserDaoTest {
         userDao.deleteAll();
         Assert.assertTrue(userDao.getCount() == 0);
 
-        userDao.add(this.user);
+        userDao.add(this.user1);
         Assert.assertTrue(userDao.getCount() == 1);
 
-        User user2 = new User("2", "name2", "ps2");
         userDao.add(user2);
         Assert.assertTrue(userDao.getCount() == 2);
 
-        User find = userDao.get(this.user.getId());
-        Assert.assertEquals(this.user.getId(), find.getId());
-        Assert.assertEquals(this.user.getName(), find.getName());
-        Assert.assertEquals(this.user.getPassword(), find.getPassword());
+        User find = userDao.get(this.user1.getId());
+        Assert.assertEquals(this.user1.getId(), find.getId());
+        Assert.assertEquals(this.user1.getName(), find.getName());
+        Assert.assertEquals(this.user1.getPassword(), find.getPassword());
 
         User find2 = userDao.get(user2.getId());
         Assert.assertEquals(user2.getId(), find2.getId());
@@ -98,7 +101,6 @@ public class UserDaoTest {
 
     @Test(expected = EmptyResultDataAccessException.class)
     public void getNotFountExceptionTest() throws SQLException, ClassNotFoundException {
-        userDao.deleteAll();
         Assert.assertTrue(userDao.getCount() == 0);
 
         User find = userDao.get("이상한Id값");
@@ -106,14 +108,13 @@ public class UserDaoTest {
 
     @Test
     public void countTest() throws SQLException, ClassNotFoundException {
-        userDao.deleteAll();
-        userDao.add(new User("1", "name1", "ps1"));
+        userDao.add(this.user1);
         Assert.assertTrue(userDao.getCount() == 1);
 
-        userDao.add(new User("2", "name2", "ps2"));
+        userDao.add(this.user2);
         Assert.assertTrue(userDao.getCount() == 2);
 
-        userDao.add(new User("3", "name3", "ps3"));
+        userDao.add(this.user3);
         Assert.assertTrue(userDao.getCount() == 3);
     }
 

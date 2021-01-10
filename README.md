@@ -726,3 +726,58 @@ TDD는 `실패한 테스트를 성공시키기 위한 목적이 아닌 코드는
 - 조건(given) : 어떠한 조건이 주어졌는가? -> userdao.deleteAll(),
 - 행위(when)  : 무엇을 할 때?  -> User find = userDao.get("이상한Id값");
 - 결과(then)  : 어떤 결과가 나온다 -> @Test(expected = EmptyResultDataAccessException.class)
+
+## 2.3.5 테스트코드개선
+- @Before
+    @Before 애노테이션이 붙은 메서드는 각 테스트들이 실행되기 전에 실행되는 메서드
+    아래 코드와 같이 ApplicationContext를 초기화하는 과정을 미리 설정할 수 있다.
+    해당 클래스의 테스트 메서드 개수만큼 실행된다.
+    ```
+        private UserDao userDao;
+        private ApplicationContext context;
+        private User user;
+    
+        @Before
+        public void setUp() {
+            this.context = new GenericXmlApplicationContext(
+                "applicationContext.xml");
+            this.userDao = this.context.getBean("userDao", UserDao.class);
+    
+            this.user = new User("1", "youzheng", "ps");
+        }
+    ```  
+- @After
+    @After 애노테이션이 붙은 메서드는 모든 테스트가 종료된 후에 실행된다.
+    자동으로 userDao.deleteAll()을 실행함으로써 다음 테스트를 위해 초기화를 미리 할 수 있다.
+    ```
+        @After
+        public void reset() throws SQLException {
+            userDao.deleteAll();
+        }
+    ```
+    JUnit은 각 테스트(@Test가 붙어있는 메서드)가 독립적인 테스트를 하기 위해서 테스트 메서드를 실행할 때 마다 독립적인 오브젝트를 만들어서 테스트를 진행한다.
+    매번 다른 오브젝트를 만드는 것은 비효율적일지 몰라도 서로 다른 테스트들이 주지 않고 독립적인 환경을 만들기 위해서 이러한 방법을 채택했다.
+
+- 픽스처 : 테스트를 수행히는 데 펼요한 정보나 오브젝트
+    테스트에 필요한 여러개의 user객체를 미리 등록해서 사용한다.
+    또한 테스트에 필요한 userDao 역시 대표적인 픽스처
+    ```
+      private UserDao userDao;
+      private ApplicationContext context;
+  
+      private User user1;
+      private User user2;
+      private User user3;
+  
+      @Before
+      public void setUp() {
+          this.context = new GenericXmlApplicationContext(
+              "applicationContext.xml");
+          this.userDao = this.context.getBean("userDao", UserDao.class);
+  
+          this.user1 = new User("1", "youzheng", "ps1");
+          this.user2 = new User("2", "woojung", "ps2");
+          this.user3 = new User("3`", "yang", "ps3");
+      }
+    ```
+  
