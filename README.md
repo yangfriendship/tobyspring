@@ -1276,3 +1276,86 @@ public interface LineReadCallback<T> {
         }, "");
     }
 ```
+
+## 3.6 스프링의 JdbcTemplate
+스프링이 기본적으로 지원해주는 템플릿/콜백을 이용한 JdbcTemplate
+
+1. JdbcTempalte를 적용한 deleteAll()
+PreparedStatement를 반환하는 PreparedStatementCreator 인터페이스(콜백)을 구현해서 넘긴다.
+```
+    public void deleteAll() throws SQLException {
+        this.jdbcTemplate.update(new PreparedStatementCreator() {
+            @Override
+            public PreparedStatement createPreparedStatement(Connection connection)
+                throws SQLException {
+                return connection.prepareStatement("delete from users");
+            }
+        });
+    }
+```
+기본적으로 내장되어 있는 콜백 함수가 많아서 쿼리만 날려도 된다.
+```
+    public void deleteAll() throws SQLException {
+        this.jdbcTemplate.update("delete from users");
+    }
+```
+2. queryForObject
+세 가지 인자를 넘겨준다.query,오브젝트배열의 sql 바인딩 파라미터, RowMapper구현체
+만약 해당하는 값을 찾지 못햇다면 `EmptyResultDataAccessException`가 발생
+RowMapper역시 중복되는 부분이기에 따로 내부클래스로 구현해 놓는것이 좋다.
+```
+    public User get(String id) throws ClassNotFoundException, SQLException {
+        return this.jdbcTemplate.queryForObject("select * from users where id= ?", new Object[]{id}
+            , new RowMapper<User>() {
+                @Override
+                public User mapRow(ResultSet resultSet, int i) throws SQLException {
+                    User user = new User();
+                    user.setId(resultSet.getString("id"));
+                    user.setName(resultSet.getString("name"));
+                    user.setPassword(resultSet.getString("password"));
+                    return user;
+                }
+            }
+        );
+    }
+```
+3. getAll()메서드를 추가하기 전 미리 테스트 코드 작성
+```
+    @Test
+    public void getAllTest() throws SQLException, ClassNotFoundException {
+        // 테이블이 비어있다면 비어있는 리스트를 반환한다.
+        userDao.deleteAll();
+        List<User> users0 = userDao.getAll();
+        Assert.assertEquals(users0.size(),0);
+
+        userDao.add(this.user1);
+        List<User> users = userDao.getAll();
+        Assert.assertEquals(users.size(), 1);
+
+        userDao.add(this.user3);
+        List<User> users2 = userDao.getAll();
+        Assert.assertEquals(users2.size(), 2);
+
+        userDao.add(this.user2);
+        List<User> users3 = userDao.getAll();
+        Assert.assertEquals(users3.size(), 3);
+
+        checkSameUser(user1, users3.get(0));
+        checkSameUser(user2, users3.get(1));
+        checkSameUser(user3, users3.get(2));
+    }
+
+    private void checkSameUser(User user1, User user2) {
+        Assert.assertEquals(user1.getId(), user2.getId());
+        Assert.assertEquals(user1.getName(), user2.getName());
+        Assert.assertEquals(user1.getPassword(), user2.getPassword());
+    }
+```
+4. getAll()메서드
+```
+    public List<User> getAll() {
+        return this.jdbcTemplate
+            .query("select * from users order by id", userRowMapper());
+    }
+```
+

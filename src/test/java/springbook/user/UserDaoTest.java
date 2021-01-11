@@ -1,6 +1,7 @@
 package springbook.user;
 
 import java.sql.SQLException;
+import java.util.List;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -16,7 +17,6 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = "/applicationContext.xml")
 public class UserDaoTest {
-
 
 
     @Autowired
@@ -41,7 +41,6 @@ public class UserDaoTest {
     public void reset() throws SQLException {
         userDao.deleteAll();
     }
-
 
 
     @Test
@@ -127,4 +126,33 @@ public class UserDaoTest {
         Assert.assertTrue(userDao.getCount() == 3);
     }
 
+    @Test
+    public void getAllTest() throws SQLException, ClassNotFoundException {
+        // 테이블이 비어있다면 비어있는 리스트를 반환한다.
+        userDao.deleteAll();
+        List<User> users0 = userDao.getAll();
+        Assert.assertEquals(users0.size(),0);
+
+        userDao.add(this.user1);
+        List<User> users = userDao.getAll();
+        Assert.assertEquals(users.size(), 1);
+
+        userDao.add(this.user3);
+        List<User> users2 = userDao.getAll();
+        Assert.assertEquals(users2.size(), 2);
+
+        userDao.add(this.user2);
+        List<User> users3 = userDao.getAll();
+        Assert.assertEquals(users3.size(), 3);
+
+        checkSameUser(user1, users3.get(0));
+        checkSameUser(user2, users3.get(1));
+        checkSameUser(user3, users3.get(2));
+    }
+
+    private void checkSameUser(User user1, User user2) {
+        Assert.assertEquals(user1.getId(), user2.getId());
+        Assert.assertEquals(user1.getName(), user2.getName());
+        Assert.assertEquals(user1.getPassword(), user2.getPassword());
+    }
 }
