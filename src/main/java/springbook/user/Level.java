@@ -2,12 +2,14 @@ package springbook.user;
 
 public enum Level {
 
-    GOLD(1), SILVER(2), BASIC(3);
+    GOLD(1, null), SILVER(2, Level.GOLD), BASIC(3, Level.SILVER);
 
     private final int value;
+    private final Level next;
 
-    Level(int value) {
+    Level(int value, Level next) {
         this.value = value;
+        this.next = next;
     }
 
     public int intValue() {
@@ -26,4 +28,10 @@ public enum Level {
                 throw new AssertionError("Unknown value: " + value);
         }
     }
+
+    public Level nextLevel(){
+        return next;
+    }
+
+
 }

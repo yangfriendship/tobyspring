@@ -1435,3 +1435,83 @@ Spring은 `DataAccessException`이라는 SqlException을 대체할 수 있는 �
         }
     }
 ```
+
+## 5.1 ~ 5.1.4 Level,UserService  추가
+특별히 메모할 내용 없고, 직접 책 한번 더 읽자
+
+## 5.1.5 코드 개선(UserService.upgradeLevels)
+
+### 리팩토링
+#### 1.메서드 추출
+`업그레이드 실행`메서드와 `업그레이드 가능여부`를 판단하는 메서드를 분리한다.
+```
+    public void upgradeLevels() {
+        List<User> users = userDao.getAll();
+        for (User user : users) {
+            if (canUpgradeUser(user)) {
+                user.upgradeLevel();
+                userDao.update(user);
+            }
+        }
+    }
+
+    private boolean canUpgradeUser(User user) {
+        Level currentLevel = user.getLevel();
+
+        switch (currentLevel) {
+            case BASIC: {
+                return user.getLogin() >= MIN_LOGIN_COUNT_FOR_SILVER;
+            }
+            case SILVER: {
+                return user.getRecommend() >= MIN_RECOMMEND_COUNT_FOR_SILVER;
+            }
+            case GOLD: {
+                return false;
+            }
+            default: {
+                throw new IllegalArgumentException("Unknown Level:" + currentLevel);
+            }
+        }
+
+    }
+```
+#### 2. 다음 업그레이드가 무엇인지 확인하는 로직
+User객체 스스로 판단하도록 만든다. 스스로 값을 교체하도록 설정한다.
+```
+public class User {
+
+    private Level level;
+    //... 생략
+    public void upgradeLevel() {
+        Level nextLevel = this.level.nextLevel();
+        if (nextLevel == null) {
+            throw new IllegalStateException(this.level + "은 더이상 업그레이드가 불가능합니다");
+        }
+        this.level = nextLevel;
+    }
+    //... 생략
+```
+#### 3. 다음 단계 레벨
+Level 스스로 다음 업그레이드 단계를 갖고 있는다.
+주의)Enum타입은 어플리케이션 실행과 함께 static 메모리에 올라간다(싱글톤).
+만약 Level의 순서를 BASIC->SILVER->GOLD로 해놓으면 BASIC이 메모리에 올라가는 중에 Level.GOLD의 값이 필요하지만
+아직 GOLD가 메모리에 올라가 있지 않기 때문에 참조할 값이 없어서 에러가 발생한다. 
+순서를 고려해서 배치해야 한다.
+```
+public enum Level {
+
+    GOLD(1, null), SILVER(2, Level.GOLD), BASIC(3, Level.SILVER);
+
+    private final int value;
+    private final Level next;
+
+    Level(int value, Level next) {
+        this.value = value;
+        this.next = next;
+    }
+    public Level nextLevel(){
+        return next;
+    }
+}
+```
+
