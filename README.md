@@ -1120,6 +1120,7 @@ add()메서드를 제외한 다른 메서드는 적용하지 않았기에 DataSo
       <property name="dataSource" ref="dataSource"/>
     </bean>
   ```
+## 3.4.2
 ### 인터페이스와 DI
 DI의 기본은 인터페이스를 이용한 주입이다. 스프링에서 DI란 Ioc의 개념도 포괄한다.
 클라이언트가 런타임 시점에 의존성을 주입해주는 것이 올바른 스프링의 DI
@@ -1165,3 +1166,113 @@ public class UserDao {
       }
 ```
 
+## 3.5 템플릿과 콜백
+1. 템플릿  : 변화지 않는 고정된 로직을 담는 부분, 일반적으로 슈퍼클래스에 해당을 넣고, 서브클래스에서 부가적인 내용을 구현하도록 설계하는 방식이다.
+2. 콜백   : 실행되는 것을 목적으로 다른 오브젝트의 메서드에 전달되는 객체, 파라미터로써 값을 담고 전달되는 것이 아니고 메서드 실행을 위해서 전달되는 객체이다. 메서드를 담은 오브젝트라서 `Functional Object`라고 부른다.
+    - 
+템플릿 콜백 패턴은 보통 단일 메서드를 구현한 익명클래스(콜백객체)를 사용한다.
+또한 보통 파라미터를 하나 전받는다. StatementStrategy(콜백)는 Connection을 JdbcContext(템플릿)에게 전달받는다.
+전달받는 파라미터는 템플릿의 작업 흐름중에 만들어지는 컨텍스트 정보이다.
+
+## 3.5.2 편리한 콜백의 재활용
+1. 중복되는 익명클래스를 만들고 템플릿에 전달하는 부분을 메서드 추출했다.
+Sql Query를 전달하면 콜백 인터페이스를 구현하고 템플릿에 전달하는 과정을 처리한다.
+add()메서드처럼 부가적인 정보를 전달받아야 한다면 가변인자를 이용해서 전달받으라하는데
+나는 못하겠다.
+```
+public class UserDao {
+    //.. 생략
+    public void deleteAll() throws SQLException {
+        executeQuery("delete from users");
+    }
+
+    private void executeQuery(final String query) throws SQLException {
+        this.jdbcContext.workWithStatementStrategy(new StatementStrategy() {
+            @Override
+            public PreparedStatement makePreparedStatement(Connection connection)
+                throws SQLException {
+                PreparedStatement ps = connection.prepareStatement(
+                    query);
+                return ps;
+            }
+        });
+    }
+
+}
+```
+## 3.5.3 템플릿/콜백의 응용
+1. 3번 이상 반복된다면 코드를 개선할 시점이다.
+2. 계산기 코드를 템플릿/콜백 패턴으로 리팩토링
+
+#### 템플릿/콜백을 이용한 계산기
+1. fileReadTemplate메서드에 try~catch~finally를 넣으므로써 중복제거
+    ```
+    private Integer fileReadTemplate(String filepath, BufferedReaderCallback callback)
+            throws IOException {
+            BufferedReader br = null;
+            try {
+                br = new BufferedReader(new FileReader(filepath));
+                Integer sum = callback.doSomethingWithReader(br);
+                return sum;
+            } catch (IOException e) {
+                System.out.println(e.getMessage());
+                throw e;
+            } finally {
+                if (br != null) {
+                    try {
+                        br.close();
+                    } catch (IOException e) {
+                        System.out.println(e.getMessage());
+                        throw e;
+                    }
+                }
+            }
+        }
+    ```
+    
+2. BufferedReaderCallback 인터페이스를 구현함으로써, 서로 다른 기능의 메서드를 구현할 수 있다.
+```
+    public int multiply(String filePath) throws IOException {
+        return fileReadTemplate(filePath, new BufferedReaderCallback() {
+            @Override
+            public Integer doSomethingWithReader(BufferedReader br) throws IOException {
+                Integer multiply = 1;
+                String line = null;
+                while ((line = br.readLine()) != null) {
+                    multiply *= Integer.parseInt(line);
+                }
+                return multiply;
+            }
+        });
+    }
+```
+
+#### 제네릭스를 이용한 리팩토링
+1. Callback 인터페이스에 제네릭스를 적용
+```
+public interface LineReadCallback<T> {
+
+   T doSomethingWithLine(String line, T value) throws IOException;
+}
+
+```
+2. Callback 인터페이스를 사용하는 클라이언트에서 타입을 결정
+```
+    public Integer multiply(String filePath) throws IOException {
+        return lineReadTemplate(filePath, new LineReadCallback<Integer>() {
+            @Override
+            public Integer doSomethingWithLine(String line, Integer value) throws IOException {
+                return value * Integer.parseInt(line);
+            }
+        }, 1);
+    }
+
+    public String concatenate(String filepath) throws IOException {
+        return lineReadTemplate(filepath, new LineReadCallback<String>() {
+            @Override
+            public String doSomethingWithLine(String line, String value) throws IOException {
+                return value + line;
+            }
+        }, "");
+    }
+```
