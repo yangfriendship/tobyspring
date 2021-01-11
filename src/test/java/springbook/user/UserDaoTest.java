@@ -11,12 +11,13 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.GenericXmlApplicationContext;
-import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.support.SQLErrorCodeSQLExceptionTranslator;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import springbook.user.dao.DaoFactory;
+import springbook.user.dao.UserDao;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = "/applicationContext.xml")
@@ -38,9 +39,9 @@ public class UserDaoTest {
     public void setUp() {
         this.context = new GenericXmlApplicationContext(
             "applicationContext.xml");
-        this.user1 = new User("1", "youzheng", "ps1");
-        this.user2 = new User("2", "woojung", "ps2");
-        this.user3 = new User("3`", "yang", "ps3");
+        this.user1 = new User("1", "youzheng", "ps1", Level.BASIC,1,0);
+        this.user2 = new User("2", "woojung", "ps2",Level.SILVER,55,10);
+        this.user3 = new User("3`", "yang", "ps3",Level.GOLD,100,40);
     }
 
     @After
@@ -176,9 +177,30 @@ public class UserDaoTest {
         }
     }
 
+    @Test
+    public void updateTest(){
+        userDao.add(user1);
+        userDao.add(user2);
+        user1.setName("우정킹");
+        user1.setPassword("changed ps");
+        user1.setLogin(1000);
+        user1.setLevel(Level.GOLD);
+        user1.setRecommend(100);
+
+        userDao.update(user1);
+
+        User find = userDao.get(user1.getId());
+        User find2 = userDao.get(user2.getId());
+        checkSameUser(user1,find);
+        checkSameUser(user2,find2);
+    }
+
     private void checkSameUser(User user1, User user2) {
         Assert.assertEquals(user1.getId(), user2.getId());
         Assert.assertEquals(user1.getName(), user2.getName());
         Assert.assertEquals(user1.getPassword(), user2.getPassword());
+        Assert.assertEquals(user1.getLevel(), user2.getLevel());
+        Assert.assertEquals(user1.getLogin(), user2.getLogin());
+        Assert.assertEquals(user1.getRecommend(), user2.getRecommend());
     }
 }

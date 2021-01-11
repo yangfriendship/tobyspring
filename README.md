@@ -528,7 +528,7 @@ Spring은 자바코드, XML, 언노테이션을 이용한 DI의존 관계 설정
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
 
-  <bean id="userDao" class="springbook.user.UserDao">
+  <bean id="userDao" class="springbook.user.dao.UserDao">
     <property name="connectionMaker" ref="connectionMaker"/>
     
   </bean>
@@ -1111,7 +1111,7 @@ add()메서드를 제외한 다른 메서드는 적용하지 않았기에 DataSo
     ```
 - applicationContext.xml 변경
     ```
-    <bean id="userDao" class="springbook.user.UserDao">
+    <bean id="userDao" class="springbook.user.dao.UserDao">
       <property name="dataSource" ref="dataSource"/>
       <property name="jdbcContext" ref="jdbcContext" />
     </bean>
@@ -1152,7 +1152,7 @@ public class UserDao {
     }
 // 변경된 applicationContext.xml
 // jdbcContext를 등록했던 빈을 제거
-      <bean id="userDao" class="springbook.user.UserDao">
+      <bean id="userDao" class="springbook.user.dao.UserDao">
         <property name="dataSource" ref="dataSource"/>
       </bean>
 ```

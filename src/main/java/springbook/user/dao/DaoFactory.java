@@ -1,4 +1,4 @@
-package springbook.user;
+package springbook.user.dao;
 
 import javax.sql.DataSource;
 import org.h2.Driver;

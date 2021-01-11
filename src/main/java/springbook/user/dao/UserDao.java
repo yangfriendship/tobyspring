@@ -1,4 +1,4 @@
-package springbook.user;
+package springbook.user.dao;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -7,10 +7,15 @@ import javax.sql.DataSource;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import springbook.user.User;
 
 public interface UserDao {
 
-    public void add(final User user) ;
+    public void add(User user) ;
+
+    public void addAll(User... users);
+
+    public void addAll(List<User> users);
 
     public User get(String id);
 
@@ -20,4 +25,5 @@ public interface UserDao {
 
     public List<User> getAll();
 
+    void update(User user1);
 }

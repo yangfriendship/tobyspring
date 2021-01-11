@@ -1,4 +1,4 @@
-package springbook.user;
+package springbook.user.dao;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -7,7 +7,8 @@ import javax.sql.DataSource;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
-import springbook.user.strategy.JdbcContext;
+import springbook.user.Level;
+import springbook.user.User;
 
 public class UserDaoJdbc implements UserDao {
 
@@ -18,8 +19,22 @@ public class UserDaoJdbc implements UserDao {
     }
 
     public void add(final User user) throws DuplicateKeyException {
-        this.jdbcTemplate.update("insert into users(id,name,password ) values(?,?,?) "
-            , user.getId(), user.getName(), user.getPassword());
+        this.jdbcTemplate.update(
+            "insert into users(id,name,password,level,login,recommend ) values(?,?,?,?,?,?) "
+            , user.getId(), user.getName(), user.getPassword(), user.getLevel().intValue(),
+            user.getLogin(), user.getRecommend());
+    }
+
+    @Override
+    public void addAll(User... users) {
+        for (User user : users) {
+            add(user);
+        }
+    }
+
+    @Override
+    public void addAll(List<User> users) {
+        addAll(users.toArray(new User[users.size()]));
     }
 
     public User get(String id) {
@@ -28,11 +43,11 @@ public class UserDaoJdbc implements UserDao {
         );
     }
 
-    public void deleteAll()  {
+    public void deleteAll() {
         this.jdbcTemplate.update("delete from users");
     }
 
-    public int getCount()  {
+    public int getCount() {
         return this.jdbcTemplate.queryForInt("select count(*) from users");
     }
 
@@ -44,6 +59,9 @@ public class UserDaoJdbc implements UserDao {
                 user.setId(resultSet.getString("id"));
                 user.setName(resultSet.getString("name"));
                 user.setPassword(resultSet.getString("password"));
+                user.setLevel(Level.valueOf(resultSet.getInt("level")));
+                user.setLogin(resultSet.getInt("login"));
+                user.setRecommend(resultSet.getInt("recommend"));
                 return user;
             }
         };
@@ -52,5 +70,13 @@ public class UserDaoJdbc implements UserDao {
     public List<User> getAll() {
         return this.jdbcTemplate
             .query("select * from users order by id", userRowMapper());
+    }
+
+    @Override
+    public void update(User user) {
+        this.jdbcTemplate.update("update users set "
+                + "name=?, password=?, level=?, login=?,recommend=? where id=?"
+            , user.getName(), user.getPassword(), user.getLevel().intValue(),
+            user.getLogin(), user.getRecommend(), user.getId());
     }
 }
