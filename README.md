@@ -1359,3 +1359,79 @@ RowMapper역시 중복되는 부분이기에 따로 내부클래스로 구현해
     }
 ```
 
+# 4장 예외처리
+## 4.1.2 예외의종류와특징
+### Error
+1. `Error` 클래스의 서브클래스
+2. 주로 VM단에서 발생하는 예외, 어플리케이션 코드에서 잡아도 대응 방법이 없다.
+3. 어플리케이션에서 신경쓰지 않아도 된다.
+### 체크 예외(Checked Exception)
+1. `Exception` 서브클래스
+2. 체크 예외가 발생할 수 있는 메소드를 샤용할 경우 반드시 예외를 처리할 코드를 함께 작성해야 한다.
+3. `catch` 문으로 잡던지, `throws` 로 날라던지 꼭 처리해야 한다.
+3. 일반적인 예외
+### 언체크 예외(Unchecked Exception)
+1. `RuntimeException` 서브클래스
+2. catch문, throws로 처리할 필요가 없다.
+3. `NullPointerException`,  `IllegalArgumentException` 등등 코드에서 미리 조건을 주어 방지할 수 있다.
+4. 개발자의 부주의로 발생하는 예외
+5. 시스템 장애 및 프로그램상의 오류
+
+## 4.1.3 예외처리 방법
+### 예외 복구
+예외 발생 시, 다른 작업 흐름으로 자연스럽게 유도하는 방법
+예외처리를 강제하는 체크 예외들은 어떤 식으로든 복구할 가능성이 있는 경우에 사용한다.
+
+### 예외처리 회피
+자신을 호출한 객체에게 예외를 throw한다.
+예외를 전달 받은 객체는 반드시 예외를 처리해야한다. 예외를 회피하려면 반드시 의도가 분명해야한다.
+무책임하게 무작정 throw를 하는 것은 옳지 못하다. 반드시 호출하는 메서드에서 처리해야 한다.
+
+### 예외 전환
+복구할 가능성이 없다고 생각하여, 회피와 마찬가지로 밖으로 예외를 던진다.
+하지만 발생한 예외를 그대로 던지는 것이 아니고 적절한 예외로 전환하여 던진다.
+### 예외 전환의 목적
+1. 예외를 좀 더 세부적인 내용으로 바꾸어 던진다면 서비스 계층에서 예외를 복구할 수 있다.
+2. 예외를 처리하기 쉽게 포장하는 방법
+
+API가 던지는 예외가 아닌 어플리케이션 코드에서 나오는 예외라면 체크예외로 처리하는 것이 적절하다.
+
+### 자바 엔터프라이즈 환경에서의 예외
+자바 엔터프라이즈 환경에서는 하나의 요청에서 예외가 발생한다면, 그 예외만 정지시키면 된다.
+작업을 일시 중단하고 예외를 복구할 방법이 없다. 어플리케이션 차원에서 요청을 빠르게 취소하고 관리자에게 통보하는 편이 낫다.
+대부분의 SqlException(99%복구불가)의 경우에는 복구가 불가능하기 때문에 빠르게 RuntimeException을 던져지는 게 낫다.
+SqlException이 발생하는 경우
+1. Sql문이 틀렸을 경우
+2. Connection 풀이 모자른 경우
+3. 서버가 다운된 경우
+4. 네트워크 환경이 불안정한 경우
+일반 적으로 어플리케이션단에서 처리할 수 있는 경우가 아니므로 빠르게 예외를 던져주는 방식이 좋다.
+#### 어플리케이션 예외
+시스템 또는 외부 상황이 아닌 어플리케이션 자체의 로직에서 발생하는 반드시 catch해서 조치를 취해야하는 예외
+
+## 4.1.5 SQLException은 어떻게 됐나?
+JdbcTemplate를 적용한 후, Dao의 메서드에서 throw Exceptio이 전부 사라졌다.
+Spring이 제공하는 API의 메서드에 정의되어 있는 예외는 대부분 런타임 예외다.
+Sql 표준Sql문법이 있기 때문에 많은 DB가 이 표준 Sql을 따르지만 벤더사의 고유의 비표준Sql은 항상 존재한다.
+마찬가지로 Jdbc를 각 DB벤더사가 인터페이스를 구현했지만 각자 DB의 에러코드는 같지 않다.
+Jdbc는 SqlException만을 던져, 자세한 상황을 알려면  `getSQLState()` 메소드로 확인해야 한다.
+즉 SqlException만으로 DB에 독립적인 유여한 코드를 작성할 수 없다.
+
+## 스프링에서 SqlException
+Spring은 `DataAccessException`이라는 SqlException을 대체할 수 있는 런타임 예외가 존재한다.
+또한  DataAccessException의 다양한 서브클래스도 존재한다. 데이터 엑세스 과정에서 발생할 수 있는 예외상황을 분류하고 이를 추상화하여 가지고 있다.
+### SQLErrorCodeSQLExceptionTranslator를 이용한 예외 전환
+```
+    @Test
+    public void sqlExceptionTranslateTest(){
+        try {
+            userDao.add(user1);
+            userDao.add(user1);
+        }catch (DuplicateKeyException e){
+            SQLException rootCause = (SQLException)e.getRootCause();
+            SQLErrorCodeSQLExceptionTranslator set = new SQLErrorCodeSQLExceptionTranslator(
+                this.dataSource);
+            Assert.assertTrue(set.translate(null,null,rootCause) instanceof DuplicateKeyException);
+        }
+    }
+```
