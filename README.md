@@ -1664,3 +1664,64 @@ public class MockMailSender implements MailSender {
     }
 }
 ```
+
+
+
+##  6.1 트랜잭션 코드의 분리
+UserService는 내부 코드에 트랜잭션을 담당하는 코드가 들어있다. 의존 오브젝트로 `PlatformTransactionManager`의 구현체를 주입받는다.
+서비스 로직을 담당하는 UserService가 부가적인 기능인 트랜잭션까지 구현하고 있는 것이 문제 이것을 분리한다!
+
+1. 현재 구현해 놓은 UserService를 UserServiceImpl로 변경하고 UserService라는 인터페이스를 생성한다.
+
+2. `UserServiceTx`라는 클래스를 생성
+PlatformTransactionManager, UserServiceImple를 의존하며 본인의 메서드가 호출될 시 UserServiceImpl의 메서드를 다시 호출한다.
+트랜잭션이 필요한 곳에 직접 부가적으로 try~catch문으로 트랜잭션 경계를 설정한다.
+```
+public class UserServiceTx implements UserService {
+
+    private UserService userService;
+    private PlatformTransactionManager transactionManager;
+
+    public void setUserService(UserService userService) {
+        this.userService = userService;
+    }
+
+    public void setTransactionManager(
+        PlatformTransactionManager transactionManager) {
+        this.transactionManager = transactionManager;
+    }
+
+    @Override
+    public void add(User user) {
+        this.userService.add(user);
+    }
+
+    @Override
+    public void upgradeLevels() {
+        TransactionStatus status = transactionManager
+            .getTransaction(new DefaultTransactionDefinition());
+        try {
+            this.userService.upgradeLevels();
+
+            System.out.println("commit");
+            transactionManager.commit(status);
+        } catch (RuntimeException e) {
+            transactionManager.rollback(status);
+            throw e;
+        }
+    }
+}
+```
+3. 변경된 빈 의존관계
+```
+  <bean id="userService" class="springbook.user.service.UserServiceTx" >
+    <property name="transactionManager" ref="transactionManager"/>
+    <property name="userService" ref="userServiceImpl" />
+  </bean>
+
+  <bean id="userServiceImpl" class="springbook.user.service.UserServiceImpl" >
+    <property name="userDao" ref="userDao" />
+    <property name="mailSender" ref="mailSender" />
+  </bean>
+```
+UserServiceImpl는 서비스 로직에 집중할 수 있고, UserServiceTx를 따로 구현함으로써 트랜잭션 기능을 따로 구현했다.

@@ -1,8 +1,8 @@
 package springbook.user.service;
 
 import static org.junit.Assert.fail;
-import static springbook.user.service.UserService.MIN_LOGIN_COUNT_FOR_SILVER;
-import static springbook.user.service.UserService.MIN_RECOMMEND_COUNT_FOR_SILVER;
+import static springbook.user.service.UserServiceImpl.MIN_LOGIN_COUNT_FOR_SILVER;
+import static springbook.user.service.UserServiceImpl.MIN_RECOMMEND_COUNT_FOR_SILVER;
 
 import java.util.Arrays;
 import java.util.List;
@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.transaction.PlatformTransactionManager;
 import springbook.user.Level;
 import springbook.user.User;
 import springbook.user.dao.UserDao;
@@ -26,19 +27,28 @@ public class UserServiceTest {
     @Autowired
     private UserService userService;
     @Autowired
+    private UserServiceImpl userServiceImpl;
+    @Autowired
     private UserDao userDao;
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+
     private List<User> users;
 
 
     @Before
     public void setUp() {
         this.users = Arrays.asList(
-            new User("1", "user1", "ps1", Level.BASIC, MIN_LOGIN_COUNT_FOR_SILVER - 1, 0,"youzheng1@gmail.com"),
-            new User("2", "user2", "ps2", Level.BASIC, MIN_LOGIN_COUNT_FOR_SILVER, 0,"youzheng2@gmail.com"),
-            new User("3", "user3", "ps3", Level.SILVER, 60, MIN_RECOMMEND_COUNT_FOR_SILVER - 1,"youzheng3@gmail.com"),
-            new User("4", "user4", "ps4", Level.SILVER, 60, MIN_RECOMMEND_COUNT_FOR_SILVER,"youzheng4@gmail.com"),
+            new User("1", "user1", "ps1", Level.BASIC, MIN_LOGIN_COUNT_FOR_SILVER - 1, 0,
+                "youzheng1@gmail.com"),
+            new User("2", "user2", "ps2", Level.BASIC, MIN_LOGIN_COUNT_FOR_SILVER, 0,
+                "youzheng2@gmail.com"),
+            new User("3", "user3", "ps3", Level.SILVER, 60, MIN_RECOMMEND_COUNT_FOR_SILVER - 1,
+                "youzheng3@gmail.com"),
+            new User("4", "user4", "ps4", Level.SILVER, 60, MIN_RECOMMEND_COUNT_FOR_SILVER,
+                "youzheng4@gmail.com"),
             new User("5", "user5", "ps5", Level.GOLD, MIN_LOGIN_COUNT_FOR_SILVER * 2,
-                MIN_LOGIN_COUNT_FOR_SILVER * 2,"youzheng5@gmail.com"));
+                MIN_LOGIN_COUNT_FOR_SILVER * 2, "youzheng5@gmail.com"));
     }
 
     @Before
@@ -111,11 +121,11 @@ public class UserServiceTest {
     @DirtiesContext
     public void upgradeLevelsTest() throws Exception {
         userDao.addAll(this.users);
-
         MockMailSender mailSender = new MockMailSender();
-        userService.setMailSender(mailSender);
 
-        userService.upgradeLevels();
+        userServiceImpl.setMailSender(mailSender);
+        userServiceImpl.upgradeLevels();
+
         checkLevelUpgraded(users.get(0), false);
         checkLevelUpgraded(users.get(1), true);
         checkLevelUpgraded(users.get(2), false);
@@ -124,29 +134,35 @@ public class UserServiceTest {
 
         List<String> requests = mailSender.getRequests();
 
-        Assert.assertEquals(requests.get(0),this.users.get(1).getEmail());
-        Assert.assertEquals(requests.get(1),this.users.get(3).getEmail());
+        Assert.assertEquals(requests.get(0), this.users.get(1).getEmail());
+        Assert.assertEquals(requests.get(1), this.users.get(3).getEmail());
     }
 
     @Test
-    public void upgradeAllOrNothing(){
+    public void upgradeAllOrNothing() {
         TestUserService testService = new TestUserService();
         testService.setUserDao(this.userDao);
+        DummyMailSender dummyMailSender = new DummyMailSender();
+        testService.setMailSender(dummyMailSender);
         this.userDao.addAll(this.users);
-        Assert.assertEquals(userDao.getCount(),users.size());
+        Assert.assertEquals(userDao.getCount(), users.size());
+
+        UserServiceTx userServiceTx = new UserServiceTx();
+        userServiceTx.setUserService(testService);
+        userServiceTx.setTransactionManager(transactionManager);
 
         try {
-            testService.upgradeLevels();
+            userServiceTx.upgradeLevels();
             fail("TestUserServiceException expected");
-        }catch (TestUserServiceException e){
+        } catch (TestUserServiceException e) {
         } catch (Exception e) {
 
         }
-        checkLevelUpgraded(users.get(0),false);
-        checkLevelUpgraded(users.get(1),false);
-        checkLevelUpgraded(users.get(2),false);
-        checkLevelUpgraded(users.get(3),false);
-        checkLevelUpgraded(users.get(4),false);
+        checkLevelUpgraded(users.get(0), false);
+        checkLevelUpgraded(users.get(1), false);
+        checkLevelUpgraded(users.get(2), false);
+        checkLevelUpgraded(users.get(3), false);
+        checkLevelUpgraded(users.get(4), false);
     }
 
     private void checkLevelUpgraded(User user, boolean expected) {
