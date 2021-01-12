@@ -8,17 +8,20 @@ public class User {
     private Level level;
     private int login;
     private int recommend;
+    private String email;
 
-    public User() {
-    }
-
-    public User(String id, String name, String password, Level level, int login, int recommend) {
+    public User(String id, String name, String password, Level level, int login, int recommend,
+        String email) {
         this.id = id;
         this.name = name;
         this.password = password;
         this.level = level;
         this.login = login;
         this.recommend = recommend;
+        this.email = email;
+    }
+
+    public User() {
     }
 
     public String getId() {
@@ -69,6 +72,14 @@ public class User {
         this.recommend = recommend;
     }
 
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
     public void upgradeLevel() {
         Level nextLevel = this.level.nextLevel();
         if (nextLevel == null) {
@@ -77,15 +88,4 @@ public class User {
         this.level = nextLevel;
     }
 
-    @Override
-    public String toString() {
-        return "User{" +
-            "id='" + id + '\'' +
-            ", name='" + name + '\'' +
-            ", password='" + password + '\'' +
-            ", level=" + level +
-            ", login=" + login +
-            ", recommend=" + recommend +
-            '}';
-    }
 }

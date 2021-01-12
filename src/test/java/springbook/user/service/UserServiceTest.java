@@ -11,6 +11,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import springbook.user.Level;
@@ -32,12 +33,12 @@ public class UserServiceTest {
     @Before
     public void setUp() {
         this.users = Arrays.asList(
-            new User("1", "user1", "ps1", Level.BASIC, MIN_LOGIN_COUNT_FOR_SILVER - 1, 0),
-            new User("2", "user2", "ps2", Level.BASIC, MIN_LOGIN_COUNT_FOR_SILVER, 0),
-            new User("3", "user3", "ps3", Level.SILVER, 60, MIN_RECOMMEND_COUNT_FOR_SILVER - 1),
-            new User("4", "user4", "ps4", Level.SILVER, 60, MIN_RECOMMEND_COUNT_FOR_SILVER),
+            new User("1", "user1", "ps1", Level.BASIC, MIN_LOGIN_COUNT_FOR_SILVER - 1, 0,"youzheng1@gmail.com"),
+            new User("2", "user2", "ps2", Level.BASIC, MIN_LOGIN_COUNT_FOR_SILVER, 0,"youzheng2@gmail.com"),
+            new User("3", "user3", "ps3", Level.SILVER, 60, MIN_RECOMMEND_COUNT_FOR_SILVER - 1,"youzheng3@gmail.com"),
+            new User("4", "user4", "ps4", Level.SILVER, 60, MIN_RECOMMEND_COUNT_FOR_SILVER,"youzheng4@gmail.com"),
             new User("5", "user5", "ps5", Level.GOLD, MIN_LOGIN_COUNT_FOR_SILVER * 2,
-                MIN_LOGIN_COUNT_FOR_SILVER * 2));
+                MIN_LOGIN_COUNT_FOR_SILVER * 2,"youzheng5@gmail.com"));
     }
 
     @Before
@@ -107,8 +108,12 @@ public class UserServiceTest {
     }
 
     @Test
+    @DirtiesContext
     public void upgradeLevelsTest() throws Exception {
         userDao.addAll(this.users);
+
+        MockMailSender mailSender = new MockMailSender();
+        userService.setMailSender(mailSender);
 
         userService.upgradeLevels();
         checkLevelUpgraded(users.get(0), false);
@@ -116,6 +121,11 @@ public class UserServiceTest {
         checkLevelUpgraded(users.get(2), false);
         checkLevelUpgraded(users.get(3), true);
         checkLevelUpgraded(users.get(4), false);
+
+        List<String> requests = mailSender.getRequests();
+
+        Assert.assertEquals(requests.get(0),this.users.get(1).getEmail());
+        Assert.assertEquals(requests.get(1),this.users.get(3).getEmail());
     }
 
     @Test

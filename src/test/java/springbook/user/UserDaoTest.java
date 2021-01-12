@@ -3,7 +3,6 @@ package springbook.user;
 import java.sql.SQLException;
 import java.util.List;
 import javax.sql.DataSource;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -37,18 +36,14 @@ public class UserDaoTest {
 
     @Before
     public void setUp() {
+        userDao.deleteAll();
+
         this.context = new GenericXmlApplicationContext(
             "applicationContext.xml");
-        this.user1 = new User("1", "youzheng", "ps1", Level.BASIC,1,0);
-        this.user2 = new User("2", "woojung", "ps2",Level.SILVER,55,10);
-        this.user3 = new User("3`", "yang", "ps3",Level.GOLD,100,40);
+        this.user1 = new User("1", "youzheng", "ps1", Level.BASIC, 1, 0, "youzheng1@gmail.com");
+        this.user2 = new User("2", "woojung", "ps2", Level.SILVER, 55, 10, "youzheng2@gmail.com");
+        this.user3 = new User("3`", "yang", "ps3", Level.GOLD, 100, 40, "youzheng3@gmail.com");
     }
-
-    @After
-    public void reset() throws SQLException {
-        userDao.deleteAll();
-    }
-
 
     @Test
     public void addTest() throws SQLException, ClassNotFoundException {
@@ -115,14 +110,14 @@ public class UserDaoTest {
     }
 
     @Test(expected = EmptyResultDataAccessException.class)
-    public void getNotFountExceptionTest() throws SQLException, ClassNotFoundException {
+    public void getNotFountExceptionTest() {
         Assert.assertTrue(userDao.getCount() == 0);
 
         User find = userDao.get("이상한Id값");
     }
 
     @Test
-    public void countTest() throws SQLException, ClassNotFoundException {
+    public void countTest() {
         userDao.add(this.user1);
         Assert.assertTrue(userDao.getCount() == 1);
 
@@ -134,11 +129,11 @@ public class UserDaoTest {
     }
 
     @Test
-    public void getAllTest() throws SQLException, ClassNotFoundException {
+    public void getAllTest() {
         // 테이블이 비어있다면 비어있는 리스트를 반환한다.
         userDao.deleteAll();
         List<User> users0 = userDao.getAll();
-        Assert.assertEquals(users0.size(),0);
+        Assert.assertEquals(users0.size(), 0);
 
         userDao.add(this.user1);
         List<User> users = userDao.getAll();
@@ -158,27 +153,28 @@ public class UserDaoTest {
     }
 
     @Test(expected = DuplicateKeyException.class)
-    public void duplicateTest(){
+    public void duplicateTest() {
         userDao.add(user1);
         userDao.add(user1);
         System.out.println(userDao.getCount());
     }
 
     @Test
-    public void sqlExceptionTranslateTest(){
+    public void sqlExceptionTranslateTest() {
         try {
             userDao.add(user1);
             userDao.add(user1);
-        }catch (DuplicateKeyException e){
-            SQLException rootCause = (SQLException)e.getRootCause();
+        } catch (DuplicateKeyException e) {
+            SQLException rootCause = (SQLException) e.getRootCause();
             SQLErrorCodeSQLExceptionTranslator set = new SQLErrorCodeSQLExceptionTranslator(
                 this.dataSource);
-            Assert.assertTrue(set.translate(null,null,rootCause) instanceof DuplicateKeyException);
+            Assert
+                .assertTrue(set.translate(null, null, rootCause) instanceof DuplicateKeyException);
         }
     }
 
     @Test
-    public void updateTest(){
+    public void updateTest() {
         userDao.add(user1);
         userDao.add(user2);
         user1.setName("우정킹");
@@ -191,8 +187,8 @@ public class UserDaoTest {
 
         User find = userDao.get(user1.getId());
         User find2 = userDao.get(user2.getId());
-        checkSameUser(user1,find);
-        checkSameUser(user2,find2);
+        checkSameUser(user1, find);
+        checkSameUser(user2, find2);
     }
 
     private void checkSameUser(User user1, User user2) {

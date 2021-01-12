@@ -10,5 +10,6 @@ name varchar(10) not null,
 password varchar(15) not null,
 level int not null,
 login int not null,
-recommend int not null
+recommend int not null,
+email varchar(25) not null
 );

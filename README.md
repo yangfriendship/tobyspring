@@ -1561,5 +1561,106 @@ public enum Level {
     }
 ``` 
 
+## 5.2.4 트랜잭션 서비스 추상화
+상위 코드에 문제는 UserService에 Transaction 기술이 종속되어 있다.
+- 현재 난해한 부분이 많아서 생략
+- 하나 이상의 DB가 참여하는 트랜잭션을 만들 때는 `JTA`를 이용한다는 것만 기억하자
 
+### 스프링의 트랜잭션 서비스 추상화
+스프링은 DB에 종속되지 않는 트랜잭션 기술을 제공함
+#### PlatformTransactionManager
+- 트랜잭션을 위해 스프링이 지원하는 트랜잭션 추상 인터페이스
+- JDBC 로컬 트랜잭션을 이용한다면 `DataSourceTransactionManager`구현체를 사용한다.
+- `DataTransactionDefinition` 오브잭트는 트랜잭션에 대한 속성을 담고 있다.
+-  `TransactionStatus` 타입의 변수에 저장된다.
 
+## 트랜잭션 기술 설정의 분리
+`PlatformTransactionManager` 역시 스프링 컨텍스트가 관리하는 빈으로 만들어 준다.
+UserService가 구체적인 구현체 `new DataSourceTransactionManager`를 알고 있는 것은 객체지향적 설계에 위배된다.
+```
+  <bean id="userService" class="springbook.user.service.UserService" >
+    <property name="userDao" ref="userDao" />
+    <property name="transactionManager" ref="transactionManager" />
+  </bean>
+
+  <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager" >
+    <property name="dataSource" ref="dataSource" />
+  </bean>
+```
+
+## 5.4.1 ~ 5.4.2 JavaMail을 이용한 메일 발송 기능
+등급이 업그레이드된 사용자에게 안내 매일을 보내는 기능 추가
+- 서비스가 완성되지 않은 시점에서 메일을 보낼 필요가 없다.
+- 메일 기능을 체크하려면 전송 여부만 확인하면 된다.
+- 메일 발송 기능을 사용하는 UserService를 테스트할 때는 메일기능이 주요 관심사가 아니다. 
+```
+    private void sendUpgradeEmail(User user) {
+
+        Properties properties = new Properties();
+        properties.setProperty("mail.smtp.host", "mail.ksug.org");
+        Session session = Session.getInstance(properties, null);
+
+        MimeMessage message = new MimeMessage(session);
+        try {
+            message.setFrom(new InternetAddress("youzheng@gmail.com"));
+            message.addRecipient(RecipientType.TO, new InternetAddress(user.getEmail()));
+            message.setSubject("upgrade 안내");
+            message.setText(
+                String.format("사용자님의 등급이 %s로 업그레이드되었습니다.", user.getLevel().name()));
+
+            Transport.send(message);
+        } catch (AddressException e) {
+            e.printStackTrace();
+        } catch (MessagingException e) {
+            e.printStackTrace();
+        }
+    }
+```
+## 5.4.3 테스트를 위한 서비스 추상화
+자바에서 지원하는 JavaMail은 테스트하기가 매우 힘들다.
+스프링이 내부적으로 JavaMail을 사용하는 `JavaMailSenderImpl`를 제공해준다.
+- UserService에게 메일 발송기능은 필수 오브젝트이지만 테스트에 있어서 필수가 아니다.
+`JavaMailSenderImpl`는 `JavaMailSender`인터페이스의 구현체이다.
+- `JavaMailSender`를 구현한 테스트용 더비 클래스를 이용해서 테스트를 진행한다.
+```
+public class DummyMailSender implements JavaMailSender {
+       // 모든 메서드를 오버라이딩 하지만 아무 기능을 하지 않기 때문에 구현하지 않는다.
+}
+
+```
+- 실제 서비스가 시작하기 전까지는 메일을 발송할 일이 없기 때문에 더미 메일을 이용해서 UserService를 테스트한다.
+```
+  <bean id="userService" class="springbook.user.service.UserService" >
+    <property name="userDao" ref="userDao" />
+    <property name="transactionManager" ref="transactionManager" />
+    <property name="mailSender" ref="mailSender" />
+  </bean>
+
+  <bean id="mailSender" class="springbook.user.service.DummyMailSender"/>
+```
+### 테스트 스텁
+- 테스트 대상의 의존 오브젝트로서 존재하면서 테스트 동안에 코드가 정상적으로 진행되도록 돕는 것
+- 테스트 내부에서 간접적으로 사용된다.
+- DI를 통해서 미리 테스트 스텁으로 변경해야 한다.
+- 실제 의존객체가 완성되지 않은 상황에서 특정 값을 리턴하도록 설정하여 독립적인 테스트와 개발을 하도록 해준다.
+
+#### MockMailSender
+Mock Object 발송이 이루어진 User의 이메일을 저장하도록 설계
+UserService의 테스트는 온전히 UserService의 기능에만 집중할 수 있게 됐다.
+```
+public class MockMailSender implements MailSender {
+    private List<String> requests = new ArrayList<String>();
+
+    public List<String> getRequests() {
+        return requests;
+    }
+    public void send(SimpleMailMessage simpleMailMessage) throws MailException {
+        for (String email : simpleMailMessage.getTo()) {
+            requests.add(email);
+        }
+    }
+    public void send(SimpleMailMessage[] simpleMailMessages) throws MailException {
+
+    }
+}
+```
