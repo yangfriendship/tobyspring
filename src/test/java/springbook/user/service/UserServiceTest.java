@@ -1,5 +1,6 @@
 package springbook.user.service;
 
+import static org.junit.Assert.fail;
 import static springbook.user.service.UserService.MIN_LOGIN_COUNT_FOR_SILVER;
 import static springbook.user.service.UserService.MIN_RECOMMEND_COUNT_FOR_SILVER;
 
@@ -15,6 +16,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import springbook.user.Level;
 import springbook.user.User;
 import springbook.user.dao.UserDao;
+import springbook.user.service.TestUserService.TestUserServiceException;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = "/applicationContext.xml")
@@ -49,7 +51,7 @@ public class UserServiceTest {
     }
 
     @Test
-    public void updateLevelsTest() {
+    public void updateLevelsTest() throws Exception {
         userDao.addAll(this.users);
         Assert.assertTrue(userDao.getCount() == 5);
 
@@ -105,7 +107,7 @@ public class UserServiceTest {
     }
 
     @Test
-    public void upgradeLevelsTest() {
+    public void upgradeLevelsTest() throws Exception {
         userDao.addAll(this.users);
 
         userService.upgradeLevels();
@@ -114,6 +116,27 @@ public class UserServiceTest {
         checkLevelUpgraded(users.get(2), false);
         checkLevelUpgraded(users.get(3), true);
         checkLevelUpgraded(users.get(4), false);
+    }
+
+    @Test
+    public void upgradeAllOrNothing(){
+        TestUserService testService = new TestUserService();
+        testService.setUserDao(this.userDao);
+        this.userDao.addAll(this.users);
+        Assert.assertEquals(userDao.getCount(),users.size());
+
+        try {
+            testService.upgradeLevels();
+            fail("TestUserServiceException expected");
+        }catch (TestUserServiceException e){
+        } catch (Exception e) {
+
+        }
+        checkLevelUpgraded(users.get(0),false);
+        checkLevelUpgraded(users.get(1),false);
+        checkLevelUpgraded(users.get(2),false);
+        checkLevelUpgraded(users.get(3),false);
+        checkLevelUpgraded(users.get(4),false);
     }
 
     private void checkLevelUpgraded(User user, boolean expected) {

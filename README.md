@@ -1515,3 +1515,51 @@ public enum Level {
 }
 ```
 
+## 5.2 트랜잭션 추상화
+### 트랜잭션 롤백(transaction rollback)
+어느 로직이 실행되는 중에 문제가 생겼을 경우, DB의 정보를 Sql실행 이전으로 돌려놓는 것
+### 트랜잭션 커밋(transaction commit)
+모든 Sql이 성공적으로 마무리된 후, DB에 작업을 확정시키는 것
+
+### JDBC의 트랜잭션
+- 하나의 Connection을 가져와 사용하다가 닫는 순간 일어난다.
+- Connection 오브젝트를 통해서 이루어진다.
+- 트랜잭션을 실행하려면 자동옵션을 `false`로 설정한다.(기본값=true)
+- 트랜잭션이 시작되면 `commit()`혹은 `rollback()`메서드가 호출될 때 까지 하나의 트랜잭션으로 묶인다.
+- 일반적으로 예외가 발생하면 `rollback`한다.
+- `setAutoCommit(false);`으로 트랜잭션을 시작하며  `commit()`혹은 `rollback()`종료하는 작업을 `트랜잭션의 경계작업`이라고 한다.
+- 하나의 DB안에서 만들어지는 트랜잭션을 `로컬 트랜잭션`(Local Transaction)이라고 한다
+
+## 5.2.3 트랜잭션동기화
+서비스객체에서 트랜잭션을 시작하기 위해 Connection을 어느 특정 장소에 보관해 놨다가 이후 호출되는 Dao 메서드에서 저장된 COnnection을 사용하는 방법
+- 트랜잭션 동기화 저장소는 작업 스레드마다 독립적으로 Connection을 생성하기 때문에 멀티스레드 환경에서 충돌할 위험이 없다.
+- `TransactionSynchronizationManager`을 이용해 동기화
+- `DataSourceUtils`를 이용해 Connection을 가져오고 반납
+```
+    public void upgradeLevels() throws Exception {
+        //트랜잭션 관리자를 이용해 동기화 작업을 초기화
+        TransactionSynchronizationManager.initSynchronization();
+        //DB컨넥션을 생성
+        Connection connection = DataSourceUtils.getConnection(this.dataSource);
+        //트랜잭션을 실행
+        connection.setAutoCommit(false);
+
+        try {
+            
+            // 업데이트하는 부분 생략..
+            connection.commit();
+        } catch (Exception e) {
+            connection.rollback();
+            throw e;
+        } finally {
+            // DB컨넥션 반환
+            DataSourceUtils.releaseConnection(connection, this.dataSource);
+            // 동기화 해제
+            TransactionSynchronizationManager.unbindResource(this.dataSource);
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+``` 
+
+
+
