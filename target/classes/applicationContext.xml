@@ -4,6 +4,7 @@
   xmlns:jdbc="http://www.springframework.org/schema/jdbc"
   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd">
 
+
   <bean id="message" class="springbook.learningtest.factorybean.MessageFactoryBean">
     <property name="text" value="Factory Bean"/>
   </bean>
@@ -12,15 +13,9 @@
     <property name="dataSource" ref="dataSource"/>
   </bean>
 
-  <bean id="userService" class="org.springframework.aop.framework.ProxyFactoryBean">
-    <property name="target" ref="userServiceImpl"/>
-    <property name="interceptorNames">
-      <list>
-        <value>transactionAdvisor</value>
-      </list>
-    </property>
-  </bean>
-
+  <!-- 프록시 자동 생성 등록-->
+  <bean class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator"/>
+  <!-- 프로바이저 = 어드바이스(부가기능) + 포인트컷(포인트컷 대상 선정기준)-->
   <bean id="transactionAdvisor" class="org.springframework.aop.support.DefaultPointcutAdvisor">
     <property name="advice" ref="transactionAdvice"/>
     <property name="pointcut" ref="transactionPointcut"/>
@@ -30,14 +25,15 @@
     <property name="transactionManager" ref="transactionManager"/>
   </bean>
 
-  <bean id="transactionPointcut" class="org.springframework.aop.support.NameMatchMethodPointcut">
-    <property name="mappedName" value="upgradeLevels"/>
+  <bean id="transactionPointcut" class="springbook.user.service.NameMatchClassMethodPointcut">
+    <property name="mappedClassName" value="*ServiceImpl"/>
+    <property name="mappedName" value="upgrade*"/>
   </bean>
 
-  <!--  <bean id="userService" class="springbook.user.service.UserServiceTx" >-->
-  <!--    <property name="transactionManager" ref="transactionManager"/>-->
-  <!--    <property name="userService" ref="userServiceImpl" />-->
-  <!--  </bean>-->
+  <bean id="userService" class="springbook.user.service.UserServiceImpl">
+    <property name="userDao" ref="userDao"/>
+    <property name="mailSender" ref="mailSender" />
+  </bean>
 
   <bean id="userServiceImpl" class="springbook.user.service.UserServiceImpl">
     <property name="userDao" ref="userDao"/>
@@ -56,5 +52,8 @@
     <property name="password" value=""/>
   </bean>
   <bean id="mailSender" class="springbook.user.service.DummyMailSender"/>
+
+  <bean id="testUserService" class="springbook.user.service.TestUserService$TestUserServiceImpl"
+    parent="userService"/>
 
 </beans>

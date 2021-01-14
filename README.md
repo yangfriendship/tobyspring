@@ -2328,6 +2328,111 @@ public class TransactionAdvice implements MethodInterceptor {
 // 테스트 생략
 
 ## 6.5.1 자동 프록시 생성
+### 빈 후처리기를 이용한 자동 프록시 생성기
+빈 후처리기 : `BeanPostProcessor` 인터페이스를 구현해서 만든다. 스프링이 빈을 둥록한 후 빈 오브젝트를 가공한다.
 
+### DefaultAdvisorAutoProxyCreator
+스프링이 제공하는 자동 프록시 빈 생성기
+- 빈 후처리기 자체를 빈으로 등록
+- 빈 오브젝트를 강제로 수정, 별도의 초기화 작업을 수행할 수도 있다.
+- 어드바이저 내의 포인트컷을 확인하여 전달받은 빈이 프록시 대상인지 확인
+- 프록시 적용 대상이라면 내장된 프록시 생성기를 이용해 프록시 빈을 생성, 어드바이스를 연결한다.
+- 프록시 빈이 생성되면, 원래 오브젝트 대신 생성한 프록시 빈을 컨테이너에게 전달한다.
 
+### Pointcut
+1. `MethodMatcher`에 등록된 메서드 이름을 통해서 해당 오브젝트의 메서드가 프록시 대상인지 확인한다.
+2. `ClassFilter`에 등록된 클래스 종류를 통해서 해당 오브젝트가 프록시 대상인지 확인한다.
+3. `ClassFilter`를 확인 후, `MethodMatcher`에 등록된 메서드 이름을 확인하기 때문에, 대상 클래스가 아니라면 메서드 이름을 확인하지 않는다.
+4. 이 두가지 조건을 전부 만족해야 해당 오브젝트에 어드바이스(부가기능)이 적용된다.
+// Pointcut 관련 테스트 예제 생략 `ReflectionTest` 하단 참고
 
+## 6.5.2 DefaultAdvisorAutoProxyCreator의 적용
+### 클래스 필터를 이용한 포인트컷 작성
+- `NameMatchMethodPointcut`를 상속해서 만든다.
+    1. `SimpleClassFilter`내부클래스로 만든다.
+    2. `SimpleClassFilter`를 
+```
+public class NameMatchClassMethodPointcut extends NameMatchMethodPointcut {
+
+    public void setMappedClassName(String mappedClassName) {
+        this.setClassFilter(new SimpleClassFilter(mappedClassName));
+    }
+
+    static class SimpleClassFilter implements ClassFilter {
+
+        private String mappedClassName;
+
+        private SimpleClassFilter(String mappedClassName) {
+            this.mappedClassName = mappedClassName;
+        }
+
+        @Override
+        public boolean matches(Class<?> aClass) {
+            return PatternMatchUtils.simpleMatch(mappedClassName, aClass.getSimpleName());
+        }
+    }
+}
+```
+- applicationContext.xml에 `DefaultAdvisorAutoProxyCreator`등록
+    1. Advisor 인터페이스를 구현한 것을 모두 찾는다.
+    2. 빈 클래스가 어드바이스의 포인트컷 대상이라면 프록시 대상으로 적용된다.
+    3. `id`와`attribute`가 없어도 된다.
+```
+  <!-- 프록시 자동 생성 등록-->
+  <bean class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator"/>
+  <!-- 프로바이저 = 어드바이스(부가기능) + 포인트컷(포인트컷 대상 선정기준)-->
+  <bean id="transactionAdvisor" class="org.springframework.aop.support.DefaultPointcutAdvisor">
+    <property name="advice" ref="transactionAdvice"/>
+    <property name="pointcut" ref="transactionPointcut"/>
+  </bean>
+
+  <bean id="transactionAdvice" class="springbook.user.service.TransactionAdvice">
+    <property name="transactionManager" ref="transactionManager"/>
+  </bean>
+
+  <bean id="transactionPointcut" class="springbook.user.service.NameMatchClassMethodPointcut">
+    <property name="mappedClassName" value="*ServiceImpl" />
+    <property name="mappedName" value="upgrade*" />
+   </bean>
+
+  <bean id="userService" class="springbook.user.service.UserServiceImpl">
+    <property name="userDao" ref="userDao"/>
+    <property name="mailSender" ref="mailSender" />
+  </bean>
+```
+`DefaultAdvisorAutoProxyCreator`에 의해서 `UserServiceImpl`가 자동으로 부가기능이 추가된 프록시 빈으로 변경되기 때문에
+별다른 설정을 하지 않고 서비스 로직만 구현한 `userServiceImpl`를 바로 빈으로 등록한다.
+### 빈 후처리기를 이용한 트랜잭션 등록 방법
+1. 의존 객체 설계
+    - 부가기능 : 트랜잭션 기능은 `MethodInterceptor`인터페이스를 구현하여 만든다.
+    - 포인트컷 : `NameMatchMethodPointcut`를 상속하여 class 이름으로도 프록시 대상을 판별하도록 만든다. 
+    - 어드바이저 : 상위 2가지를 담고 있는 객체, `DefaultPointcutAdvisor`인터페이스를 빈으로 등록한다.
+```
+     <bean id="transactionAdvisor" class="org.springframework.aop.support.DefaultPointcutAdvisor">
+       <property name="advice" ref="${adviceId}"/>
+       <property name="pointcut" ref="${pointcutId}"/>
+     </bean>
+```
+2. 프록시 빈을 자동으로 등록해주는 객체 `DefaultAdvisorAutoProxyCreator`
+```
+  <bean class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator"/>
+```
+
+### 트랜잭션 어드바이스를 적용한 프록시 자동 생성기를 빈 후처리기 메커니즘을 적용할 시 주의점
+1. 원하는 대상이 부가기능(트랜잭션)이 적용되었는가?
+2. 원하는 대상을 제외한 기타 객체들 또한 부기가능이 적용되었는가? (`비슷한 이름`, 혹은 `동일한 인터페이스를 구현한 객체`)
+    - 1번을 실행 한 후, 등록된 `pointcut`의 적용 대상을 변경해서 다시 테스트를 실행한다. ex) *serviceImpl ->*NotserviceImpl로 변경
+    ```
+         <bean id="transactionPointcut" class="springbook.user.service.NameMatchClassMethodPointcut">
+           <property name="mappedClassName" value="*NotServiceImpl" />
+           <property name="mappedName" value="upgrade*" />
+          </bean>
+   ```
+    - 어드바이스가 적용될 프록시의 타켓은 프록시로 변경된다면 Proxy.class로 변경도니다
+    ```
+       @Test
+       public void proxyObjectTest(){
+           Assert.assertTrue(testUserService instanceof Proxy);
+           Assert.assertTrue(userService instanceof Proxy);
+       }
+   ```

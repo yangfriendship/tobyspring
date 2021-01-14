@@ -38,11 +38,11 @@ public class UserServiceTest {
     @Autowired
     private UserService userService;
     @Autowired
-    private UserServiceImpl userServiceImpl;
-    @Autowired
     private UserDao userDao;
     @Autowired
     private PlatformTransactionManager transactionManager;
+    @Autowired
+    private UserService testUserService;
     @Autowired
     private ApplicationContext context;
 
@@ -75,7 +75,7 @@ public class UserServiceTest {
     }
 
     @Test
-    public void updateLevelsTest()  {
+    public void updateLevelsTest() {
         userDao.addAll(this.users);
         Assert.assertTrue(userDao.getCount() == 5);
 
@@ -171,14 +171,10 @@ public class UserServiceTest {
     @DirtiesContext
     public void upgradeAllOrNothing() throws Exception {
 
-        TestUserService testService = getTestUserService();
-
-        ProxyFactoryBean factoryBean = context.getBean("&userService", ProxyFactoryBean.class);
-        factoryBean.setTarget(testService);
-        UserService userService = (UserService) factoryBean.getObject();
+        this.userDao.addAll(this.users);
 
         try {
-            userService.upgradeLevels();
+            testUserService.upgradeLevels();
             fail("TestUserServiceException expected");
         } catch (TestUserServiceException e) {
         } catch (Exception e) {
@@ -189,6 +185,12 @@ public class UserServiceTest {
         checkLevelUpgraded(users.get(2), false);
         checkLevelUpgraded(users.get(3), false);
         checkLevelUpgraded(users.get(4), false);
+    }
+
+    @Test
+    public void proxyObjectTest(){
+        Assert.assertTrue(testUserService instanceof Proxy);
+        Assert.assertTrue(userService instanceof Proxy);
     }
 
     private TestUserService getTestUserService() {

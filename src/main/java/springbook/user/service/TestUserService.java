@@ -22,6 +22,19 @@ public class TestUserService extends UserServiceImpl {
         super.upgradeLevel(user);
     }
 
+    static class TestUserServiceImpl extends UserServiceImpl {
+
+        private static final String TARGET_ID = "4";
+
+        @Override
+        protected void upgradeLevel(User user) {
+            if (user.getId().equals(TARGET_ID)) {
+                throw new TestUserServiceException();
+            }
+            super.upgradeLevel(user);
+        }
+    }
+
 
     static class TestUserServiceException extends RuntimeException {
 
