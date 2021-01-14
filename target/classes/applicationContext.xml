@@ -4,22 +4,34 @@
   xmlns:jdbc="http://www.springframework.org/schema/jdbc"
   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd">
 
+  <bean id="message" class="springbook.learningtest.factorybean.MessageFactoryBean">
+    <property name="text" value="Factory Bean"/>
+  </bean>
+
   <bean id="userDao" class="springbook.user.dao.UserDaoJdbc">
-    <property name="dataSource" ref="dataSource" />
+    <property name="dataSource" ref="dataSource"/>
   </bean>
 
-  <bean id="userService" class="springbook.user.service.UserServiceTx" >
+  <bean id="userService" class="springbook.user.service.TxProxyFactoryBean">
+    <property name="pattern" value="upgradeLevels"/>
     <property name="transactionManager" ref="transactionManager"/>
-    <property name="userService" ref="userServiceImpl" />
+    <property name="serviceInterface" value="springbook.user.service.UserService"/>
+    <property name="target" ref="userServiceImpl"/>
   </bean>
 
-  <bean id="userServiceImpl" class="springbook.user.service.UserServiceImpl" >
-    <property name="userDao" ref="userDao" />
-    <property name="mailSender" ref="mailSender" />
+  <!--  <bean id="userService" class="springbook.user.service.UserServiceTx" >-->
+  <!--    <property name="transactionManager" ref="transactionManager"/>-->
+  <!--    <property name="userService" ref="userServiceImpl" />-->
+  <!--  </bean>-->
+
+  <bean id="userServiceImpl" class="springbook.user.service.UserServiceImpl">
+    <property name="userDao" ref="userDao"/>
+    <property name="mailSender" ref="mailSender"/>
   </bean>
 
-  <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager" >
-    <property name="dataSource" ref="dataSource" />
+  <bean id="transactionManager"
+    class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+    <property name="dataSource" ref="dataSource"/>
   </bean>
 
   <bean id="dataSource" class="org.springframework.jdbc.datasource.SimpleDriverDataSource">

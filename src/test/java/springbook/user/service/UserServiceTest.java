@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import static springbook.user.service.UserServiceImpl.MIN_LOGIN_COUNT_FOR_SILVER;
 import static springbook.user.service.UserServiceImpl.MIN_RECOMMEND_COUNT_FOR_SILVER;
 
+import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.Assert;
@@ -17,6 +18,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.mail.MailSender;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.test.annotation.DirtiesContext;
@@ -25,7 +27,6 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.transaction.PlatformTransactionManager;
 import springbook.user.Level;
 import springbook.user.User;
-import springbook.user.dao.MockUserDao;
 import springbook.user.dao.UserDao;
 import springbook.user.service.TestUserService.TestUserServiceException;
 
@@ -41,6 +42,8 @@ public class UserServiceTest {
     private UserDao userDao;
     @Autowired
     private PlatformTransactionManager transactionManager;
+    @Autowired
+    private ApplicationContext context;
 
     private List<User> users;
 
@@ -71,7 +74,7 @@ public class UserServiceTest {
     }
 
     @Test
-    public void updateLevelsTest() throws Exception {
+    public void updateLevelsTest()  {
         userDao.addAll(this.users);
         Assert.assertTrue(userDao.getCount() == 5);
 
@@ -144,18 +147,18 @@ public class UserServiceTest {
         userServiceImpl.upgradeLevels();
 
         // mockUserDao 확인
-        verify(mockUserDao,times(2)).update(any(User.class));
-        verify(mockUserDao,times(2)).update(any(User.class));
+        verify(mockUserDao, times(2)).update(any(User.class));
+        verify(mockUserDao, times(2)).update(any(User.class));
         verify(mockUserDao).update(users.get(1));
         verify(mockUserDao).update(users.get(3));
 
         // mockMail 확인
         ArgumentCaptor<SimpleMailMessage> mailMessageArg = ArgumentCaptor
             .forClass(SimpleMailMessage.class);
-        verify(mockMail,times(2)).send(mailMessageArg.capture());
+        verify(mockMail, times(2)).send(mailMessageArg.capture());
         List<SimpleMailMessage> mailMessages = mailMessageArg.getAllValues();
-        Assert.assertEquals(mailMessages.get(0).getTo()[0],users.get(1).getEmail());
-        Assert.assertEquals(mailMessages.get(1).getTo()[0],users.get(3).getEmail());
+        Assert.assertEquals(mailMessages.get(0).getTo()[0], users.get(1).getEmail());
+        Assert.assertEquals(mailMessages.get(1).getTo()[0], users.get(3).getEmail());
     }
 
     private void checkUserAndLevel(User user, String expectedId, Level level) {
@@ -164,7 +167,9 @@ public class UserServiceTest {
     }
 
     @Test
-    public void upgradeAllOrNothing() {
+    @DirtiesContext
+    public void upgradeAllOrNothing() throws Exception {
+
         TestUserService testService = new TestUserService();
         testService.setUserDao(this.userDao);
         DummyMailSender dummyMailSender = new DummyMailSender();
@@ -172,12 +177,13 @@ public class UserServiceTest {
         this.userDao.addAll(this.users);
         Assert.assertEquals(userDao.getCount(), users.size());
 
-        UserServiceTx userServiceTx = new UserServiceTx();
-        userServiceTx.setUserService(testService);
-        userServiceTx.setTransactionManager(transactionManager);
+        TxProxyFactoryBean factoryBean = context.getBean("&userService", TxProxyFactoryBean.class);
+        factoryBean.setTarget(testService);
+
+        UserService userService = (UserService)factoryBean.getObject();
 
         try {
-            userServiceTx.upgradeLevels();
+            userService.upgradeLevels();
             fail("TestUserServiceException expected");
         } catch (TestUserServiceException e) {
         } catch (Exception e) {
