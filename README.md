@@ -2436,3 +2436,84 @@ public class NameMatchClassMethodPointcut extends NameMatchMethodPointcut {
            Assert.assertTrue(userService instanceof Proxy);
        }
    ```
+   
+## 6.5.3 포인트컷 표현식을 이용한 포인트컷
+### 포인트컷표현식
+- AspectJExpressionPointcut 클래스를 이용
+- 자세한 내용은 ~P497 참고 및 구글링
+
+### 기존의 포인트컷을 포인트컷 표현식으로 변경
+```
+  <bean id="transactionPointcut" class="org.springframework.aop.aspectj.AspectJExpressionPointcut">
+    <property name="expression" value="execution(* *..*ServiceImpl.upgrade*(..))" />
+  </bean>
+```
+### 포인트컷 표현식 주의점
+`execution(* *..*ServiceImpl.upgrade*(..))`
+1. 포인트컷 표현식에서 클래식 이름에 적용되는 패턴은 `클래스 이름`이 아니라 `클래스 타입`이다.
+2. `UserServiceImpl`는 `UserService`인터페이스의 구현체이기 때문에, `UserService`를 구현한 모든 구현체이 포인트컷의 대상이 된다.
+3. 포인트 컷은 `타입 패턴`을 기준으로 원리가 작동한다.
+
+~ P508 내용은 다시 읽자!
+## 6.5.6 AOP의 용어
+1. 타겟
+    - 부가기능을 구현한 대상
+    - 경우에 따라서는 다른 부가기능을 제공하는 프록시 오브젝트일 수도 있다.(예:데코레이션 패턴)
+2. 어드바이스
+    - 타겟에게 제공할 부가기능을 담은 모듈
+    - 오브젝트로 정의하지만 메서드 레벨에서 정의할 수도 있다.
+    - `Methodlnterceptor`인터페이스를 구현해서 만들었다.
+3. 조인 포인트
+    - 어드바이스가 적용될 위치
+    - 스프링의 프록시 AOP에서 조인포인트는 메서드의 실행 단계뿐이다.
+    - 타겟 오브젝트가 구현한 인터페이스의 모든 메서드는 조인 포인트가 된다.
+4. 포인트컷
+    - 어드바이스가 적용할 조인 포인트를 선별하는 작업 또는 그 기능을 정의한 모듈
+    - 메서드 선정이란 곧 결국 클래스를 선정하고 그 안의 메서드를 선별하는 과정을 거친다.
+5. 프록시
+    - 클라이언트와 타겟 사이에서 부가기능을 제공하는 오브젝트
+    - 클라이언트의 호출을 대신 받아서 부가기능을 제공한 후 타겟에게 위임한다.
+6. 어드바이스
+    - 포인트컷과 어드바이스를 갖고 있는 오브젝트
+    - 스프링 프록시 AOP에서 사용되는 용어, 일반적인 AOP에서는 사용되지 않는다.
+7. 에스팩트
+    - 포인트컷과 어드바이스의 조합으로 만들어진다.
+    - 싱글톤 형태로 존재한다.
+    - 클래스와 같은 모률 정의와 오브젝트와 같은 실제의 구분이 특별히 없다.(두 가지 모두 에스팩트라 부른다)
+
+## 6.5.7 AOP 네임스페이스
+### 스프링의 프록시 방식 AOP를 적용을 위한 네 가지 빈
+1. 자동 프록시 생성기
+    - `DefaultAdvisorAutoProxyCreator`을 빈으로 등록
+    - `id`와 `attribute`는 따로 등록하지 않아도 된다.
+    - 빈이 생성되는 과정에서 `빈 후처리기`로 참여한다.
+    - 빈으로 등록된 어드바이스를 이용해서 프록시를 자동으로 생성하는 기능을 담당
+2. 어드바이스
+    - 부가기능을 구현한 클래스. ex) `MeothodInterceptor`인터페이스
+    - AOP관련 빈 중에서 유일하게 직접 구현한다.
+3. 포인트컷
+    - `AspectJExpressionPointcut`을 이용해 등록
+    - `expression`을 이용해 어드바이스가 적용될 클래스, 메서드를 설정한다.
+    - 선정 기준은 클래스이름이 아니고 `클래스 타입`이다! 
+4. 어드바이스
+    - `DefaultPointcutAdvisor`를 이용해서 빈으로 등록
+    - 프로퍼티로 `어드바이스`와 `포인트컷` 구현체를 받는다.
+    - 자동 프록시 생성기에 의해서 검색되어 사용된다.
+### AOP 네임스페이스
+```
+  <AOP:config >
+    <AOP:pointcut id="transactionPointcut" expression="execution(* *..*ServiceImpl.upgrade*(..))"/>
+    <AOP:advisor advice-ref="transactionAdvice" pointcut-ref="transactionPointcut"   />
+  </AOP:config>
+
+  <bean id="transactionAdvice" class="springbook.user.service.TransactionAdvice">
+    <property name="transactionManager" ref="transactionManager"/>
+  </bean>
+```
+1. <AOP:config > : `DefaultAdvisorAutoProxyCreator`을 빈으로 등록해준다.
+2. <AOP:pointcut > : 포인트컷을 설정 `AspectJExpressionPointcut`를 등록하는 것과 동일
+3. <AOP:advisor > : `DefaultPointcutAdvisor`을 등록 `advice`와 `pointcut`을 프로퍼티로 갖는다.
+    - 내장 포인트컷을 이용할수도 있다
+    `<AOP:advisor advice-ref="transactionAdvice" 
+                pointcut="execution(* *..*ServiceImpl.upgrade*(..))" />`
+    

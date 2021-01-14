@@ -2,7 +2,8 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xmlns:jdbc="http://www.springframework.org/schema/jdbc"
-  xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd">
+  xmlns:AOP="http://www.springframework.org/schema/aop"
+  xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
 
 
   <bean id="message" class="springbook.learningtest.factorybean.MessageFactoryBean">
@@ -13,21 +14,12 @@
     <property name="dataSource" ref="dataSource"/>
   </bean>
 
-  <!-- 프록시 자동 생성 등록-->
-  <bean class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator"/>
-  <!-- 프로바이저 = 어드바이스(부가기능) + 포인트컷(포인트컷 대상 선정기준)-->
-  <bean id="transactionAdvisor" class="org.springframework.aop.support.DefaultPointcutAdvisor">
-    <property name="advice" ref="transactionAdvice"/>
-    <property name="pointcut" ref="transactionPointcut"/>
-  </bean>
+  <AOP:config >
+    <AOP:advisor advice-ref="transactionAdvice" pointcut="execution(* *..*ServiceImpl.upgrade*(..))"   />
+  </AOP:config>
 
   <bean id="transactionAdvice" class="springbook.user.service.TransactionAdvice">
     <property name="transactionManager" ref="transactionManager"/>
-  </bean>
-
-  <bean id="transactionPointcut" class="springbook.user.service.NameMatchClassMethodPointcut">
-    <property name="mappedClassName" value="*ServiceImpl"/>
-    <property name="mappedName" value="upgrade*"/>
   </bean>
 
   <bean id="userService" class="springbook.user.service.UserServiceImpl">
