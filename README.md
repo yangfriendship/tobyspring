@@ -2516,4 +2516,32 @@ public class NameMatchClassMethodPointcut extends NameMatchMethodPointcut {
     - 내장 포인트컷을 이용할수도 있다
     `<AOP:advisor advice-ref="transactionAdvice" 
                 pointcut="execution(* *..*ServiceImpl.upgrade*(..))" />`
-    
+
+## 6.6.1 트랜잭션 정의
+### 트랜잭션 전파(Transaction Propagation) 
+트랜잭션의 경계에서 이미 진행중인 트랜잭션이 있을 때 또는 없을 때 어떻게 동작할 것인가를 결정하는 방식
+propagate: 전파하다
+
+1. PROPAGATION_REQUIRED
+    - 가장 많이 사용되는 `트랜잭션 전파 속성`
+    - 이미 진행되고 있는 트랜잭션이 있다면 `참여`, 없다면 `새로 시작`
+    - `DefaultTransactionDefinition`의 트랜잭션 전파속성이 `PROPAGATION_REQUIRED`
+2. PROPAGATION_REQUIRES_NEW
+    - 항상 독자적으로 `새로운 트랜잭션을 시작`
+    - 독립적인 트랜잭션이 보장되어야 하는 상황에서 사용
+3. PROPAGATION_NOT_SUPPORTED
+    - 진행중인 트랜잭션이 있더라도 무시
+    - 트랜잭션이 없이 동작하도록 만든다
+
+### 격리수준(Isolation Level)
+- 기본적으로는 DB나 DataSource 에 설정된 디폴트 격리 수준을 따르는 것ㅇ ㅣ좋다.
+-  `DefaultTransactionDefinition`의 격리수준은 `Default`이다
+
+### 제한 시간(Timeout)
+- `DefaultTransactionDefinition`의 제한 시간은 없다
+- `PROPAGATION_REQUIRED`나 `PROPAGATION_REQUIRES_NEW`와 함께 사용해야만 의미가 있다.
+
+### 읽기 전용(Read Ony)
+- DB에 접속시 트랜잭션 내에서 데이터 조작을 금지하게 한다.
+- 데이터 엑세스 기술에 따라서 성능이 상향될 수도 있다.
+
