@@ -2226,3 +2226,108 @@ public class TxProxyFactoryBean implements FactoryBean<Object> {
     - 하지만 여러 개의 부가기능을 한 번에 적용할 수 없다.
 2. 하나의 타겟에 여러 개의 부가기능을 적용할 수 없다.
 
+## 6.4.1 ProxyFactoryBean
+### 스프링의 ProxyFactoryBean
+- 프록시를 생성하여 빈으로 등록하게 도와주는 팩토리 빈
+- `MethodInterceptor`인터페이스를 이용하여 `부가기능`을 생성
+- `InvocationHandler()`의 경우에는 오브젝트에 대한 정보를 제공하지 않는다.
+- 하지만 `MethodInterceptor`의 메서드는 `ProxyFactoryBean`으로 부터 오브젝트에 관한 정보까지 함께 제공받는다.
+- 타겟 오브젝트에 상관없이 독립으로 생성할 수 있다.
+- `MethodInterceptor`의 오브젝트는 다른 여러 프록시와 함께 사용 가능(Advice인터페이스를 상속한 서브인터페이스)
+- 싱글톤으로 등록 가능
+
+### ProxxyFactoryBean을 이용한 부가기능 추가
+- `MethodInterceptor`인터페이스 구현으로 부가기능 설정
+    1. `proceed()`메서드를 통해서 타켓 오브젝트의 메서드를 실행
+    2. `MethodInvocation`를 통해서 오브젝트의 구체적인 정보를 전달받는다.
+    3. 부가기능에 대한 로직에 집중할 수 있다.
+    4. 범용적으로 사용하기 위하여 싱글톤으로 등록한다. (상태 값을 저장할 수 없다.)
+    5. `MethodInterceptor`는 부가기능만 담는 객체이며
+    6. 타켓을 선정하는 역할은 `PointCut`을 이용한다.
+```
+    static class UpperAdvice implements MethodInterceptor {
+        @Override
+        public Object invoke(MethodInvocation methodInvocation) throws Throwable {
+            String proceed = (String) methodInvocation.proceed();
+            return proceed.toUpperCase();
+        }
+```
+- `ProxyFactoryBean`을 통한 ProxyBean 생성
+    1. `setTarget()`메서드로 부가기능이 적용될 타켓 오브젝트 설정
+    2. `addAdvice()`메서드로 부기가능 추가, set이 아니고 add인 이유는 다수의 부기가능을 추가할 수 있기 때문이다.
+    3. `템플릿/콜백` 패턴을 이용했다. ProxyFactoryBean이 `템플릿`, MethodInterceptor가 `콜백`
+```
+    @Test
+    public void springProxyFactoryBeanTest(){
+        ProxyFactoryBean proxyFactoryBean = new ProxyFactoryBean();
+        proxyFactoryBean.setTarget(new HelloTarget());
+        proxyFactoryBean.addAdvice(new UpperAdvice());
+
+        Hello hello = (Hello) proxyFactoryBean.getObject();
+
+        String name = "youzheng";
+        Assert.assertEquals(hello.sayHello(name),"HELLO "+name.toUpperCase());
+        Assert.assertEquals(hello.sayHi(name),"HI "+name.toUpperCase());
+        Assert.assertEquals(hello.sayThankYou(name),"THANK YOU "+name.toUpperCase());
+    }
+
+```
+
+## 6.4.2 ProxyFactoryBean 적용
+ProxyFactoryBean은 대상을 선별하는 포인트컷과 실제 부가기능을 추가하는 어드바이스를 `템플릿/콜백`패턴을 이용하여 분리했다.
+이 둘을 가지고 있는 객체를 어드바이저라고 하고, 포인트컷과 어드바이스를 빈으로 등록하면 재활용이 가능하다.
+- Advisor, Advice, Pointcut, ProxyFactoryBean 등록
+부기가능에 대한 구체적인 구현이 있는 `Advice`를 제외하면 클래스를 구현하지 않고 바로 xml을 통해서 등록해도 된다.
+```
+ <bean id="userService" class="org.springframework.aop.framework.ProxyFactoryBean">
+    <property name="target" ref="userServiceImpl"/>
+    <property name="interceptorNames">
+      <list>
+        <value>transactionAdvisor</value>
+      </list>
+    </property>
+  </bean>
+
+  <bean id="transactionAdvisor" class="org.springframework.aop.support.DefaultPointcutAdvisor">
+    <property name="advice" ref="transactionAdvice"/>
+    <property name="pointcut" ref="transactionPointcut"/>
+  </bean>
+
+  <bean id="transactionAdvice" class="springbook.user.service.TransactionAdvice">
+    <property name="transactionManager" ref="transactionManager"/>
+  </bean>
+
+  <bean id="transactionPointcut" class="org.springframework.aop.support.NameMatchMethodPointcut">
+    <property name="mappedName" value="upgradeLevels"/>
+  </bean>
+```
+- MethodInterceptor인터페이스를 구현한 TransactionAdvice(어드바이스) 
+```
+public class TransactionAdvice implements MethodInterceptor {
+
+    private PlatformTransactionManager transactionManager;
+    // Setter 생략
+
+    @Override
+    public Object invoke(MethodInvocation methodInvocation) throws Throwable {
+
+        TransactionStatus status = transactionManager
+            .getTransaction(new DefaultTransactionDefinition());
+
+        try {
+            Object proceed = methodInvocation.proceed();
+            transactionManager.commit(status);
+            return proceed;
+        } catch (RuntimeException e) {
+            transactionManager.rollback(status);
+            throw e;
+        }
+    }
+}
+```
+// 테스트 생략
+
+## 6.5.1 자동 프록시 생성
+
+
+

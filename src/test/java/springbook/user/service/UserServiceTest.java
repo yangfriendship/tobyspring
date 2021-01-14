@@ -17,6 +17,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
+import org.springframework.aop.framework.ProxyFactoryBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.mail.MailSender;
@@ -170,17 +171,11 @@ public class UserServiceTest {
     @DirtiesContext
     public void upgradeAllOrNothing() throws Exception {
 
-        TestUserService testService = new TestUserService();
-        testService.setUserDao(this.userDao);
-        DummyMailSender dummyMailSender = new DummyMailSender();
-        testService.setMailSender(dummyMailSender);
-        this.userDao.addAll(this.users);
-        Assert.assertEquals(userDao.getCount(), users.size());
+        TestUserService testService = getTestUserService();
 
-        TxProxyFactoryBean factoryBean = context.getBean("&userService", TxProxyFactoryBean.class);
+        ProxyFactoryBean factoryBean = context.getBean("&userService", ProxyFactoryBean.class);
         factoryBean.setTarget(testService);
-
-        UserService userService = (UserService)factoryBean.getObject();
+        UserService userService = (UserService) factoryBean.getObject();
 
         try {
             userService.upgradeLevels();
@@ -194,6 +189,16 @@ public class UserServiceTest {
         checkLevelUpgraded(users.get(2), false);
         checkLevelUpgraded(users.get(3), false);
         checkLevelUpgraded(users.get(4), false);
+    }
+
+    private TestUserService getTestUserService() {
+        TestUserService testService = new TestUserService();
+        testService.setUserDao(this.userDao);
+        DummyMailSender dummyMailSender = new DummyMailSender();
+        testService.setMailSender(dummyMailSender);
+        this.userDao.addAll(this.users);
+        Assert.assertEquals(userDao.getCount(), users.size());
+        return testService;
     }
 
     private void checkLevelUpgraded(User user, boolean expected) {
