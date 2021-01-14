@@ -1797,5 +1797,46 @@ UserService를 테스트하는 과정에서 UserDao를 통해서 DB에 값을 �
 - Dao를 테스트할 때는 DB연결까지 만드는 것이 효과적이다.
 - Dao테스트는 외부리소스(DB)를 이용하기 때문에 `통합테스트로`분류 된다.
 - 스프링 테스트 컨텍스트를 이용하는 테스트는 `통합테스트`다.
-- 나머지 생략
+- 나머지 생략  (P424) 다시 읽자!
 
+## 6.2.4 목 프레임워크
+단위 테스트를 만들기 위해서는 스텁이나 목 오브젝트 사용이 필수적이다. 
+의존관계가 없는 클래스나 세부 로직을 검증하기 위해 메서드 단위로 테스트 하는 것이 아니라면 대부분 의존 관계 오브젝트가 생성되어야 한다.
+매번 테스트를 위한 목을 생성하는 것도 번거러운 일이다. 이러한 테스트를 위해서 `Mockito`프레임워크를 사용하자
+### Mockito 프레임워크를 이용한 UserService.updateLevles테스트
+- 테스트를 위해서 스텁 역할을 하는 클래스를 생성할 필요가 없다.
+- 메서드 리턴값을 직접 설정할 수 있다. `when().thenReturn()`
+- 등등 테스트를 위한 여러가지 기능을 제공
+```
+    @Test
+    public void upgradeLevelsTest() throws Exception {
+        // 목 프레임워크를 이용한 UserDao객체 생성
+        UserDao mockUserDao = mock(UserDao.class);
+        when(mockUserDao.getAll()).thenReturn(this.users);
+
+        // 목 프레임워크를 이용한 MailSender객체 생성
+        MailSender mockMail = mock(MailSender.class);
+
+        UserServiceImpl userServiceImpl = new UserServiceImpl();
+
+        userServiceImpl.setMailSender(mockMail);
+        userServiceImpl.setUserDao(mockUserDao);
+
+        // 테스트 대상 실행
+        userServiceImpl.upgradeLevels();
+
+        // mockUserDao 확인
+        verify(mockUserDao,times(2)).update(any(User.class));
+        verify(mockUserDao,times(2)).update(any(User.class));
+        verify(mockUserDao).update(users.get(1));
+        verify(mockUserDao).update(users.get(3));
+
+        // mockMail 확인
+        ArgumentCaptor<SimpleMailMessage> mailMessageArg = ArgumentCaptor
+            .forClass(SimpleMailMessage.class);
+        verify(mockMail,times(2)).send(mailMessageArg.capture());
+        List<SimpleMailMessage> mailMessages = mailMessageArg.getAllValues();
+        Assert.assertEquals(mailMessages.get(0).getTo()[0],users.get(1).getEmail());
+        Assert.assertEquals(mailMessages.get(1).getTo()[0],users.get(3).getEmail());
+    }
+```

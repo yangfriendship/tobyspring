@@ -1,6 +1,11 @@
 package springbook.user.service;
 
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static springbook.user.service.UserServiceImpl.MIN_LOGIN_COUNT_FOR_SILVER;
 import static springbook.user.service.UserServiceImpl.MIN_RECOMMEND_COUNT_FOR_SILVER;
 
@@ -10,7 +15,10 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.MailSender;
+import org.springframework.mail.SimpleMailMessage;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
@@ -120,28 +128,34 @@ public class UserServiceTest {
 
     @Test
     public void upgradeLevelsTest() throws Exception {
-        MockUserDao mockUserDao = new MockUserDao(this.users);
+        // 목 프레임워크를 이용한 UserDao객체 생성
+        UserDao mockUserDao = mock(UserDao.class);
+        when(mockUserDao.getAll()).thenReturn(this.users);
 
-        // 메일발송 여부를 체크하기 위해 Mock오브젝트를 생성 후 삽입
-        MockMailSender mailSender = new MockMailSender();
+        // 목 프레임워크를 이용한 MailSender객체 생성
+        MailSender mockMail = mock(MailSender.class);
+
         UserServiceImpl userServiceImpl = new UserServiceImpl();
 
-        userServiceImpl.setMailSender(mailSender);
+        userServiceImpl.setMailSender(mockMail);
         userServiceImpl.setUserDao(mockUserDao);
 
         // 테스트 대상 실행
         userServiceImpl.upgradeLevels();
 
-        List<User> updated = mockUserDao.getUpdated();
+        // mockUserDao 확인
+        verify(mockUserDao,times(2)).update(any(User.class));
+        verify(mockUserDao,times(2)).update(any(User.class));
+        verify(mockUserDao).update(users.get(1));
+        verify(mockUserDao).update(users.get(3));
 
-        Assert.assertEquals(2, updated.size());
-        checkUserAndLevel(updated.get(0), "2", Level.SILVER);
-        checkUserAndLevel(updated.get(1), "4", Level.GOLD);
-
-        // Mcok 오브젝트를 이용한 확인
-        List<String> requests = mailSender.getRequests();
-        Assert.assertEquals(requests.get(0), this.users.get(1).getEmail());
-        Assert.assertEquals(requests.get(1), this.users.get(3).getEmail());
+        // mockMail 확인
+        ArgumentCaptor<SimpleMailMessage> mailMessageArg = ArgumentCaptor
+            .forClass(SimpleMailMessage.class);
+        verify(mockMail,times(2)).send(mailMessageArg.capture());
+        List<SimpleMailMessage> mailMessages = mailMessageArg.getAllValues();
+        Assert.assertEquals(mailMessages.get(0).getTo()[0],users.get(1).getEmail());
+        Assert.assertEquals(mailMessages.get(1).getTo()[0],users.get(3).getEmail());
     }
 
     private void checkUserAndLevel(User user, String expectedId, Level level) {
