@@ -1725,3 +1725,77 @@ public class UserServiceTx implements UserService {
   </bean>
 ```
 UserServiceImpl는 서비스 로직에 집중할 수 있고, UserServiceTx를 따로 구현함으로써 트랜잭션 기능을 따로 구현했다.
+
+## 6.2 테스트 대상 오브젝트 고립시키기
+UserService를 테스트하는 과정에서 UserDao를 통해서 DB에 값을 넣고, 불러들이는 과정은 주 관심사가 아니다.
+그러므로 해당 UserDao의 작동과정을 Mock오브젝트를 이용해 생략할 수 있다.
+- 고립 테스트를 위한 MockUserDao 오브젝트
+```
+    public class MockUserDao implements UserDao {
+    private List<User> users;
+    private List<User> updated = new ArrayList<User>();
+
+    public MockUserDao(List<User> users) {
+        this.users = users;
+    }
+    @Override
+    public List<User> getAll() {
+        return this.users;
+    }
+    @Override
+    public void update(User user) {
+        updated.add(user);
+    }
+    public List<User> getUpdated() {
+        return this.updated;
+    }
+    // 다른 메서드들은 throw new UnsupportedOperationException();로 혹시모를 사용을 방지한다.
+}
+```
+- MockUserDao 오브젝트를 이용한 UserService 테스트
+```
+  @Test
+    public void upgradeLevelsTest() throws Exception {
+        MockUserDao mockUserDao = new MockUserDao(this.users);
+
+        // 메일발송 여부를 체크하기 위해 Mock오브젝트를 생성 후 삽입
+        MockMailSender mailSender = new MockMailSender();
+        UserServiceImpl userServiceImpl = new UserServiceImpl();
+
+        userServiceImpl.setMailSender(mailSender);
+        userServiceImpl.setUserDao(mockUserDao);
+
+        // 테스트 대상 실행
+        userServiceImpl.upgradeLevels();
+
+        List<User> updated = mockUserDao.getUpdated();
+
+        Assert.assertEquals(2, updated.size());
+        checkUserAndLevel(updated.get(0), "2", Level.SILVER);
+        checkUserAndLevel(updated.get(1), "4", Level.GOLD);
+
+        // Mcok 오브젝트를 이용한 확인
+        List<String> requests = mailSender.getRequests();
+        Assert.assertEquals(requests.get(0), this.users.get(1).getEmail());
+        Assert.assertEquals(requests.get(1), this.users.get(3).getEmail());
+    }
+
+    private void checkUserAndLevel(User user, String expectedId, Level level) {
+        Assert.assertEquals(user.getId(), expectedId);
+        Assert.assertEquals(user.getLevel(), level);
+    }
+```
+    1. 고립테스트를 위해서 Spring의 DI를 사용하지 않는다.
+    2. UserServiceImpl 객체를 직접 인스턴스화
+    3. 의전 객체를 직접 Setter메서드를 이용해 주입
+테스트의 목적인 부분만 확인하도록 테스트 준비과정인 유저 등록과 호출 부분을 Mock오브젝트 생성을 이용하여 단축시켰다.
+
+## 6.2.3 단위 테스트와 통합 테스트
+### 단위테스트, 통합테스트 가이드라인  (P424)
+- 항상 단위테스트를 고려
+- 외부 리소스를 사용해야하는 경우에는 `통합테스트`로 만든다.
+- Dao를 테스트할 때는 DB연결까지 만드는 것이 효과적이다.
+- Dao테스트는 외부리소스(DB)를 이용하기 때문에 `통합테스트로`분류 된다.
+- 스프링 테스트 컨텍스트를 이용하는 테스트는 `통합테스트`다.
+- 나머지 생략
+

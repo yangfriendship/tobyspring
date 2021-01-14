@@ -17,6 +17,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.transaction.PlatformTransactionManager;
 import springbook.user.Level;
 import springbook.user.User;
+import springbook.user.dao.MockUserDao;
 import springbook.user.dao.UserDao;
 import springbook.user.service.TestUserService.TestUserServiceException;
 
@@ -118,24 +119,34 @@ public class UserServiceTest {
     }
 
     @Test
-    @DirtiesContext
     public void upgradeLevelsTest() throws Exception {
-        userDao.addAll(this.users);
+        MockUserDao mockUserDao = new MockUserDao(this.users);
+
+        // 메일발송 여부를 체크하기 위해 Mock오브젝트를 생성 후 삽입
         MockMailSender mailSender = new MockMailSender();
+        UserServiceImpl userServiceImpl = new UserServiceImpl();
 
         userServiceImpl.setMailSender(mailSender);
+        userServiceImpl.setUserDao(mockUserDao);
+
+        // 테스트 대상 실행
         userServiceImpl.upgradeLevels();
 
-        checkLevelUpgraded(users.get(0), false);
-        checkLevelUpgraded(users.get(1), true);
-        checkLevelUpgraded(users.get(2), false);
-        checkLevelUpgraded(users.get(3), true);
-        checkLevelUpgraded(users.get(4), false);
+        List<User> updated = mockUserDao.getUpdated();
 
+        Assert.assertEquals(2, updated.size());
+        checkUserAndLevel(updated.get(0), "2", Level.SILVER);
+        checkUserAndLevel(updated.get(1), "4", Level.GOLD);
+
+        // Mcok 오브젝트를 이용한 확인
         List<String> requests = mailSender.getRequests();
-
         Assert.assertEquals(requests.get(0), this.users.get(1).getEmail());
         Assert.assertEquals(requests.get(1), this.users.get(3).getEmail());
+    }
+
+    private void checkUserAndLevel(User user, String expectedId, Level level) {
+        Assert.assertEquals(user.getId(), expectedId);
+        Assert.assertEquals(user.getLevel(), level);
     }
 
     @Test
