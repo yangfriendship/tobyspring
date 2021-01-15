@@ -3,7 +3,8 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xmlns:jdbc="http://www.springframework.org/schema/jdbc"
   xmlns:AOP="http://www.springframework.org/schema/aop"
-  xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+  xmlns:tx="http://www.springframework.org/schema/tx"
+  xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd">
 
 
   <bean id="message" class="springbook.learningtest.factorybean.MessageFactoryBean">
@@ -14,13 +15,22 @@
     <property name="dataSource" ref="dataSource"/>
   </bean>
 
-  <AOP:config >
-    <AOP:advisor advice-ref="transactionAdvice" pointcut="execution(* *..*ServiceImpl.upgrade*(..))"   />
-  </AOP:config>
+  <!-- 트랜잭션 애노테이션을 사용하기 위한 설정 -->
+  <tx:annotation-driven />
 
-  <bean id="transactionAdvice" class="springbook.user.service.TransactionAdvice">
-    <property name="transactionManager" ref="transactionManager"/>
-  </bean>
+  <!-- xml을 이용한 AOP 트랜잭션 적용 -->
+<!--  <AOP:config >-->
+<!--    <AOP:advisor advice-ref="transactionAdvice" pointcut="bean(*Service)" />-->
+<!--  </AOP:config>-->
+
+<!--  <tx:advice id="transactionAdvice" >-->
+<!--    <tx:attributes>-->
+<!--      <tx:method name="get*" read-only="true"/>-->
+<!--      <tx:method name="*" />-->
+<!--    </tx:attributes>-->
+<!--  </tx:advice>-->
+
+
 
   <bean id="userService" class="springbook.user.service.UserServiceImpl">
     <property name="userDao" ref="userDao"/>
@@ -38,14 +48,14 @@
   </bean>
 
   <bean id="dataSource" class="org.springframework.jdbc.datasource.SimpleDriverDataSource">
-    <property name="driverClass" value="org.h2.Driver"/>
-    <property name="url" value="jdbc:h2:tcp://localhost/~/test"/>
-    <property name="username" value="sa"/>
-    <property name="password" value=""/>
+    <property name="driverClass" value="com.mysql.cj.jdbc.Driver"/>
+    <property name="url"
+      value="jdbc:mysql://127.0.0.1:3306/book?useSSL=false&amp;serverTimezone=Asia/Seoul"/>
+    <property name="username" value="root"/>
+    <property name="password" value="1234"/>
   </bean>
   <bean id="mailSender" class="springbook.user.service.DummyMailSender"/>
 
-  <bean id="testUserService" class="springbook.user.service.TestUserService$TestUserServiceImpl"
+  <bean id="testUserService" class="springbook.user.service.TestUserService"
     parent="userService"/>
-
 </beans>

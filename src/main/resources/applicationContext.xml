@@ -15,16 +15,20 @@
     <property name="dataSource" ref="dataSource"/>
   </bean>
 
-  <AOP:config >
-    <AOP:advisor advice-ref="transactionAdvice" pointcut="bean(*Service)" />
-  </AOP:config>
+  <!-- 트랜잭션 애노테이션을 사용하기 위한 설정 -->
+  <tx:annotation-driven />
 
-  <tx:advice id="transactionAdvice" >
-    <tx:attributes>
-      <tx:method name="get*" read-only="true"/>
-      <tx:method name="*" />
-    </tx:attributes>
-  </tx:advice>
+  <!-- xml을 이용한 AOP 트랜잭션 적용 -->
+<!--  <AOP:config >-->
+<!--    <AOP:advisor advice-ref="transactionAdvice" pointcut="bean(*Service)" />-->
+<!--  </AOP:config>-->
+
+<!--  <tx:advice id="transactionAdvice" >-->
+<!--    <tx:attributes>-->
+<!--      <tx:method name="get*" read-only="true"/>-->
+<!--      <tx:method name="*" />-->
+<!--    </tx:attributes>-->
+<!--  </tx:advice>-->
 
 
 
