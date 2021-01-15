@@ -32,8 +32,33 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public void add(List<User> users) {
+        this.userDao.addAll(users);
+    }
+
+    @Override
+    public User get(String id) {
+        return this.userDao.get(id);
+    }
+
+    @Override
+    public List<User> getAll() {
+        return this.userDao.getAll();
+    }
+
+    @Override
+    public void deleteAll() {
+        this.userDao.deleteAll();
+    }
+
+    @Override
     public void upgradeLevels() {
         upgradeLevelsInternal();
+    }
+
+    @Override
+    public void update(User user) {
+        this.userDao.update(user);
     }
 
     private void upgradeLevelsInternal() {

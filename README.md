@@ -2534,7 +2534,7 @@ propagate: 전파하다
     - 트랜잭션이 없이 동작하도록 만든다
 
 ### 격리수준(Isolation Level)
-- 기본적으로는 DB나 DataSource 에 설정된 디폴트 격리 수준을 따르는 것ㅇ ㅣ좋다.
+- 기본적으로는 DB나 DataSource 에 설정된 디폴트 격리 수준을 따르는 것이 좋다.
 -  `DefaultTransactionDefinition`의 격리수준은 `Default`이다
 
 ### 제한 시간(Timeout)
@@ -2544,4 +2544,106 @@ propagate: 전파하다
 ### 읽기 전용(Read Ony)
 - DB에 접속시 트랜잭션 내에서 데이터 조작을 금지하게 한다.
 - 데이터 엑세스 기술에 따라서 성능이 상향될 수도 있다.
+
+## 6.6.2 트랜잭션 인터셉터와 트랜잭션 속성
+메서드 별로 다른 트랜잭션 정의를 하려면 어드바이스의 기능을 확장해야 한다.
+### TransactionInterceptor
+스프링에서 지원하는 `TransactionInterceptor`를 사용한다. `TransactionAdvice`를 사용할 필요가 없다.
+기존의 `TransactionAdvice`의 어드바이스를 제공하는 기능에 메서드 이름 패턴을 지정하는 기능이 추가된 것이다.
+`PlatformTransactionManager`와 `Properties`(transactionAttributes) 타입의 두 가지 프로퍼티를 갖는다.
+`rollbackOn()`메서드에 상위 프로퍼티가 사용된다.
+1. `TransactionInterceptor`
+- 런타임 예외가 발생하면 `rollback`한다.
+- 런타임 예외가 아닌 체크예외를 발생시키면 예외상황으로 인식하지 않는다(rooback하지 않고 commit)
+
+2. `Properties` 트랜잭션 속성 지정
+    1. PROPAGATION_[VALUE]	: 트랜잭션 전파 방식, `필수사항`
+    2. ISOLATION_[VALUE] 	: 격리 수준, 생략시 기본값으로 지정된다.
+    3. readOnly				: 읽기전용으로 지정, 기본값은 false
+    4. timeout_[seconds]		: 제한시간, 생략가능
+    5. -Exceptionl			: `체크 예외` 중에서 롤백할 대상을 추가한다.
+    6. +Exceptionl			: `런타임 예외`지만 롤백할 대상에서 제외한다.
+
+3. applicationContext.xml에 `TransactionInterceptor`등록
+```
+  <bean id="transactionAdvice" class="org.springframework.transaction.interceptor.TransactionInterceptor" >
+    <property name="transactionManager" ref="transactionManager" />
+    <property name="transactionAttributes" >
+      <props>
+        <prop key="get*">PROPAGATION_REQUIRED,readOnly,timeout_30</prop>
+        <prop key="upgrade*">PROPAGATION_REQUIRES_NEW,ISOLATION_SERIALIZABLE</prop>
+        <prop key="*">PROPAGATION_REQUIRED</prop>
+      </props>
+    </property>
+  </bean>
+```
+
+### tx네임스페이스를 이용한 설정 방법
+tx 스키마의 전용 태그를 이용해 `TransactionInterceptor`와 `transactionAttributes`를 지정할 수 있다.
+IDE의 도움을 받을 수 있어서(자동완성), 실수할 확율이 매우 적다.
+```
+  <tx:advice id="transactionAdvice" transaction-manager="transactionManager" >
+    <tx:attributes>
+      <tx:method name="get*" propagation="REQUIRED" read-only="true" timeout="30"/>
+      <tx:method name="upgrade*" propagation="REQUIRES_NEW" isolation="SERIALIZABLE" />
+      <tx:method name="*" propagation="REQUIRED" />
+    </tx:attributes>
+  </tx:advice>
+``` 
+## 6.6.3 포인트컷과 트랜잭션 속성의 적용 전략
+1. 트랜잭션 포인트컷 표현식은 타입 패턴이나 번 이름을 이용한다
+    - 일반적으로 트랜잭션을 적용할 타깃 클래스의 메소드는 모두 트랜잭션 적용 후보가 되는 것이 바람직하다.
+    - 너무 세세하게 메서드 단위로 트랜잭션을 줄 필요는 없다.
+    - 클래스보다는 인터페이스 타입에게 트랜잭션을 준다.
+    - `bean() 표현식`을 이용해서 타겟을 선정하는 것도 고려해보자.  
+      `bean() 표현식`은 빈 이름을 기준으로 메서드를 선정한다.
+2. 공통된 메소드 이름 규칙을 통해 최소한의 트랜잭션 어드바이스와 속성을 정의한다.
+    - 읽기 속성을 넣는 경우에는 메서드의 접두사를 `get`,`find`와 같이 지정하여 규칙을 지정해준다.
+3. 프록시 방식 AOP는 같은 타깃 오브젝트 내의 메소드를 호출할 때는 적용되지 않는다.(주의사항!)
+    - 타깃 오브젝트가 트랜젹선 대상이라 할지라도 트랜잭션 오브젝트를 통한 호출이 아닌 타깃 오브젝트 내부에서 
+    메서드 호출이라면 트랜잭션이 적용되지 않는다.
+    - 같은 타깃 오브젝트 안에서 메소드 호출이 일어나는 경우에는 프록시 AOP를 통해 부여해준 부가기능이 적용되지 않는다.
+
+## 6.6.4 트랜잭션 속성 적용
+UserService에 aop 프록시를 이용한 트랙잭션 적용
+1. xml 설정
+기존에 사용하던 H2 DB를 MySql로 변경했다.
+H2에서는 readOnly설정을 하더라도 예외가 발생하지 않는 문제를 해결하지 못했다..
+```
+  <bean id="dataSource" class="org.springframework.jdbc.datasource.SimpleDriverDataSource">
+    <property name="driverClass" value="com.mysql.cj.jdbc.Driver"/>
+    <property name="url"
+      value="jdbc:mysql://127.0.0.1:3306/book?useSSL=false&amp;serverTimezone=Asia/Seoul"/>
+    <property name="username" value="root"/>
+    <property name="password" value="1234"/>
+  </bean>
+
+  <AOP:config >
+    <AOP:advisor advice-ref="transactionAdvice" pointcut="bean(*Service)" />
+  </AOP:config>
+
+  <tx:advice id="transactionAdvice" >
+    <tx:attributes>
+      <tx:method name="get*" read-only="true"/>
+      <tx:method name="*" />
+    </tx:attributes>
+  </tx:advice>
+```
+
+2. UserService에 메서드 추가 (코드 생략)
+
+3. readOnly 설정 확인을 위한 테스트 코드
+TestUserService의 코드에서 getAll()메서드를 오버라이딩했다.
+getAll()메서드가 진행되는 중에 update()메서드를 사용하도록 변경(코드생략)
+```
+    @Test(expected = TransientDataAccessResourceException.class)
+    public void readOnlyExceptionTest(){
+
+        this.userDao.addAll(this.users);
+
+        testUserService.getAll();
+
+    }
+```
+
 

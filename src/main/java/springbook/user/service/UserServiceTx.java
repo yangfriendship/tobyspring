@@ -1,5 +1,6 @@
 package springbook.user.service;
 
+import java.util.List;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
@@ -25,6 +26,26 @@ public class UserServiceTx implements UserService {
     }
 
     @Override
+    public void add(List<User> user) {
+
+    }
+
+    @Override
+    public User get(String id) {
+        return null;
+    }
+
+    @Override
+    public List<User> getAll() {
+        return null;
+    }
+
+    @Override
+    public void deleteAll() {
+
+    }
+
+    @Override
     public void upgradeLevels() {
         TransactionStatus status = transactionManager
             .getTransaction(new DefaultTransactionDefinition());
@@ -38,5 +59,10 @@ public class UserServiceTx implements UserService {
             transactionManager.rollback(status);
             throw e;
         }
+    }
+
+    @Override
+    public void update(User user) {
+
     }
 }
