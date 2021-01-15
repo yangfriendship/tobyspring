@@ -2729,5 +2729,100 @@ deleteALl()메서드는 DB의 값을 조작하기 때문에 `TransientDataAccess
 
 ### 트랜잭션에 관한 내용은 따로 블로그에 정리
 
+# 7장 스프링 핵심 기술의 응용
+## 7.1 Sql과 Dao의 분리
+Dao안에 있는 Sql은 변경될 가능성이 있기 때문에 Dao와 분리한다.
 
+## 7.1.1 XML 설정을 이용한 분리
+### 개별 SQL 프로퍼티 방식
+각 클래스에 필요한 Sql을 필드 변수로 저장하는 방식, Dao의 수량이나 메서드의 양이 늘어난다면 관리하기 힘듬
+`
+    private static final SQL_ADD = "insert into users([properties..] valuse(?,?...))"
+    // Sql이 필요한 부분에 해당 상수를 넣어주고 applicationContext에서 해당 sql을 설정하는 방식이다.
+` 
+### SQL 맵프로퍼티 방식
 
+1. applicationContext를 통해서 빈 생성시 query를 갖고 있는 Map을 주입 해준다.
+```
+  <bean id="userDao" class="springbook.user.dao.UserDaoJdbc">
+    <property name="dataSource" ref="dataSource"/>
+    <property name="sqlMap">
+      <map>
+        <entry key="add"
+          value="insert into users(id,name,password,level,login,recommend,email ) values(?,?,?,?,?,?,?)"/>
+        <entry key="get" value="select * from users where id= ?"/>
+        <entry key="deleteAll" value="delete from users"/>
+        <entry key="getCount" value="select count(*) from users"/>
+        <entry key="update"
+          value="update users set name=?, password=?, level=?, login=?,recommend=?,email=? where id=?"/>
+        <entry key="getAll" value="select * from users order by id" />
+      </map>
+    </property>
+  </bean>
+```
+2. UserDaoJdbc 적용
+sqlMap에서 해당 메서드에게 필요한 쿼리를 찾아서 실행
+```
+public class UserDaoJdbc implements UserDao {
+    private Map<String, String> sqlMap;
+    public void setSqlMap(Map<String, String> sqlMap) {
+        this.sqlMap = sqlMap;
+    }
+    public void add(final User user) throws DuplicateKeyException {
+        this.jdbcTemplate.update(
+            this.sqlMap.get("add")
+            , user.getId(), user.getName(), user.getPassword(), user.getLevel().intValue(),
+            user.getLogin(), user.getRecommend(), user.getEmail());
+    }
+    // 기타 생략..
+}
+```
+## 7.1.2 SQL제공 서비스
+상위 두 가지 방법은 Dao와 Sql을 분리했지만 스프링 빈을 설정하는 xml에 Sql을 저장할 필요가 없다.
+독립적인 Sql 제공 서비스가 필요하다. 스프링 빈 설정에서 Sql을 또 분리한다. 
+
+### SQL 서비스 인터폐이스
+
+1. SqlService 인터페이스 생성 및 SimpleSqlService(Map을 통해 저장) 구현
+```
+public class SimpleSqlService implements SqlService {
+
+    private static final String ERROR_MESSAGE = "에 대한 SQL을 찾을 수 없습니다.";
+    private Map<String, String> sqlMap;
+
+    public void setSqlMap(Map<String, String> sqlMap) {
+        this.sqlMap = sqlMap;
+    }
+    @Override
+    public String getSql(String key) throws SqlRetrievalFailureException {
+        if (!this.sqlMap.containsKey(key)) {
+            throw new SqlRetrievalFailureException(key + ERROR_MESSAGE);
+        }
+        return this.sqlMap.get(key);
+    }
+}
+```
+2. applicationContext 수정
+sqlService 구현체 SimpleSqlService에 sqlMap에 대한 프로퍼티를 넣어준다.
+그리고 SimpleSqlService를 sqlService가 사용하여 Sql을 찾는다.
+```
+  <bean id="userDao" class="springbook.user.dao.UserDaoJdbc">
+    <property name="dataSource" ref="dataSource"/>
+    <property name="sqlService" ref="sqlService" />
+  </bean>
+
+  <bean id="sqlService" class="springbook.user.sqlservice.SimpleSqlService" >
+    <property name="sqlMap">
+      <map>
+        <entry key="userAdd"
+          value="insert into users(id,name,password,level,login,recommend,email ) values(?,?,?,?,?,?,?)"/>
+        <entry key="userGet" value="select * from users where id= ?"/>
+        <entry key="userDeleteAll" value="delete from users"/>
+        <entry key="userGetCount" value="select count(*) from users"/>
+        <entry key="userUpdate"
+          value="update users set name=?, password=?, level=?, login=?,recommend=?,email=? where id=?"/>
+        <entry key="userGetAll" value="select * from users order by id" />
+      </map>
+    </property>
+  </bean>
+```
