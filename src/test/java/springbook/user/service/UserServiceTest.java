@@ -12,6 +12,7 @@ import static springbook.user.service.UserServiceImpl.MIN_RECOMMEND_COUNT_FOR_SI
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.List;
+import javax.swing.JSpinner.DateEditor;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,9 +25,14 @@ import org.springframework.dao.TransientDataAccessResourceException;
 import org.springframework.mail.MailSender;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.annotation.NotTransactional;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 import springbook.user.Level;
 import springbook.user.User;
 import springbook.user.dao.UserDao;
@@ -189,18 +195,34 @@ public class UserServiceTest {
     }
 
     @Test
-    public void proxyObjectTest(){
+    public void proxyObjectTest() {
         Assert.assertTrue(testUserService instanceof Proxy);
         Assert.assertTrue(userService instanceof Proxy);
     }
 
     @Test(expected = TransientDataAccessResourceException.class)
-    public void readOnlyExceptionTest(){
+    @NotTransactional
+    public void readOnlyExceptionTest() {
 
         this.userDao.addAll(this.users);
 
         testUserService.getAll();
 
+    }
+
+    @Test
+    public void transactionSync() {
+        DefaultTransactionDefinition definition = new DefaultTransactionDefinition();
+        TransactionStatus status = transactionManager.getTransaction(definition);
+        Assert.assertEquals(0,this.userDao.getCount());
+        userService.deleteAll();
+        userService.add(users.get(0));
+        userService.add(users.get(1));
+        Assert.assertEquals(2,this.userDao.getCount());
+
+
+        transactionManager.rollback(status);
+        Assert.assertEquals(0,this.userDao.getCount());
     }
 
     private TestUserService getTestUserService() {

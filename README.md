@@ -2668,3 +2668,66 @@ annotationContext.xml에 아래와 같은 설정을 추가한다.
 ```
 xml 설정에 있던 트랜잭션 설정을 모두 제거하고 UserService 인터페이스에 기존 설정을
 애노테이션을 이용하여 설정해준다.(생략)
+
+## 6.8.1 선언적 트랜잭션과 트랜잭션 전파 속성
+선언적 트랜잭션 : AOP를 이용해 코드 외부에서 트랜잭션의 기능을 부여해주고 속성을 지정 
+프로그램에 의한 트랜잭션 :`TransactionTemplate`이나 개별 데이터 기술의 트랜잭션 API를 사용해 직접 코드 안에 
+특별한 경우가 아니라면 `선언적 트랜잭션`을 이용
+
+## 6.8.2 트랜잭션 동기화와 테스트
+AOP를 이용한 프록시 기술로 트랜잭션이라는 부가기능을 애플리케이션 전반에 적용할 수 있다.
+AOP가 없었다면 선언적 트랜잭션과 트랜잭션 전파 등은 불가능 했을 것이다.
+
+### 트랜잭션 매니저와 트랜잭션 동기화
+트랜잭션 추상화 기술의 핵심은 트랜잭션 매니저와 트랜잭션 동기화
+`PlatformTransactionManager`의 구현체를 이용하여 트랜잭션 기술을 추상화했고
+트랜잭션 기술의 종류에 상관 없이 일관적인 트랜잭션 기술을 적용할 수 있다.
+1. 트랜잭션 매니저를 이용한 트랜잭션을 미리 시작하는 방법
+deleteAll(), add() 이 두가지 메서드는 전부 트랜잭션 기술이 적용되어 있다.
+전파 수준이 `REQUIRED`로 되어 있기에 사전에 시작한 트랜잭션 경계가 존재한다면
+해당 트랜잭션에 합류한다.
+`transactionManager`를 이용해 3개의 메서드가 실행되기 전에 트랜잭션 경계를 시작한다면
+후에 시작되는 3개의 메서드는 해당 트랜잭션에 합류한다.
+`transactionManager`를 이용해서 `setReadOnly(true)` 읽기전용 속성을 추가했다.
+deleteALl()메서드는 DB의 값을 조작하기 때문에 `TransientDataAccessResourceException`가 발생한다.
+즉, `getTransaction()`을 통해서 시작된 트랜잭션이 아래에 있는 다른 메서드(전파=`REQUIRED`)에게 영향을
+미치는 것이다.
+```
+    @Test(expected = TransientDataAccessResourceException.class)
+    public void transactionSync() {
+        DefaultTransactionDefinition definition = new DefaultTransactionDefinition();
+        definition.setReadOnly(true);
+        TransactionStatus status = transactionManager.getTransaction(definition);
+
+        userService.deleteAll();
+        userService.add(users.get(0));
+        userService.add(users.get(1));
+        transactionManager.commit(status);
+    }
+```
+2. 트랜잭션 동기화 테스트 코드
+```
+    @Test
+    public void transactionSync() {
+        DefaultTransactionDefinition definition = new DefaultTransactionDefinition();
+        TransactionStatus status = transactionManager.getTransaction(definition);
+        Assert.assertEquals(0,this.userDao.getCount());
+        userService.deleteAll();
+        userService.add(users.get(0));
+        userService.add(users.get(1));
+        Assert.assertEquals(2,this.userDao.getCount());
+
+
+        transactionManager.rollback(status);
+        Assert.assertEquals(0,this.userDao.getCount());
+    }
+```
+
+## 6.8.3 테스트를 위한 트랜잭션 애노테이션
+테스트에서 `@Transactional`를 사용할 수 있다. 예전에 블로그에서 보고 몇 번 적용해 봤었지만
+테스트 롤백이 실행되지 않았던 이유는 `<tx :annotation-driven />`를 설정하지 않았기 때문이다..
+
+### 트랜잭션에 관한 내용은 따로 블로그에 정리
+
+
+
