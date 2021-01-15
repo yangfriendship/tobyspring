@@ -2826,3 +2826,52 @@ sqlService 구현체 SimpleSqlService에 sqlMap에 대한 프로퍼티를 넣어
     </property>
   </bean>
 ```
+
+## 7.2 인터페이스의 분리와 자기참조 빈
+
+## 7.2.1 XML파일 매핑
+1. Sql의 저장한 xml파일
+책 다시 읽자!
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<sqlmap xmlns="http://www.epril.com/sqlmap"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.epril.com/sqlmap http://www.epril.com/sqlmap/sqlmap.xsd">
+
+  <sql key="userAdd">INSERT INTO users(id, name, password, level, login, recommend, email) VALUES (?, ?, ?, ?, ?, ?, ?)</sql>
+  <sql key="userGet">SELECT * FROM users WHERE id = ?</sql>
+  <sql key="userDeleteAll">DELETE FROM users</sql>
+  <sql key="userGetCount">SELECT count(*) FROM users</sql>
+  <sql key="userGetAll">SELECT * FROM users ORDER by id</sql>
+  <sql key="userUpdate">UPDATE users SET name = ?, password = ?, level = ?, login = ?, recommend = ?, email = ? where id = ?</sql>
+</sqlmap>
+```
+2. XmlSqlService 
+```
+public class XmlSqlService implements SqlService {
+    private static final String FILE_PATH = "/sqlmap/sqlmap.xml";
+    private static final String ERROR_MESSAGE = "에 대한 SQL을 찾을 수 없습니다.";
+    private Map<String, String> sqlMap = new HashMap<String, String>();
+    public XmlSqlService() {
+
+        String contextPath = Sqlmap.class.getPackage().getName();
+        try {
+            JAXBContext context = JAXBContext.newInstance(contextPath);
+            Unmarshaller unmarshaller = context.createUnmarshaller();
+            Sqlmap sqlmap = (Sqlmap) unmarshaller
+                .unmarshal(getClass().getResourceAsStream(FILE_PATH));
+            for (SqlType sqlType : sqlmap.getSql()) {
+                this.sqlMap.put(sqlType.getKey(), sqlType.getValue());
+            }
+
+        } catch (JAXBException e) {
+            throw new RuntimeException();
+        }
+    }
+    @Override
+    public String getSql(String key) throws SqlRetrievalFailureException {
+        //생략
+    }
+}
+```
+

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE schema [
+  <!ELEMENT schema (element|complexType)*>
+  <!ATTLIST schema
+    xmlns CDATA #REQUIRED
+    targetNamespace CDATA #REQUIRED
+    xmlns:tns CDATA #REQUIRED
+    elementFormDefault CDATA #REQUIRED>
+  <!ELEMENT element (complexType)*>
+  <!ATTLIST element
+    maxOccurs CDATA #IMPLIED
+    name CDATA #REQUIRED
+    type CDATA #IMPLIED>
+  <!ELEMENT complexType (sequence|simpleContent)*>
+  <!ATTLIST complexType
+    name CDATA #IMPLIED>
+  <!ELEMENT sequence (element)*>
+  <!ELEMENT simpleContent (extension)*>
+  <!ELEMENT extension (attribute)*>
+  <!ATTLIST extension
+    base CDATA #REQUIRED>
+  <!ELEMENT attribute (#PCDATA)>
+  <!ATTLIST attribute
+    name CDATA #REQUIRED
+    use CDATA #REQUIRED
+    type CDATA #REQUIRED>
+  ]>
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+  targetNamespace="http://www.epril.com/sqlmap"
+  xmlns:tns="http://www.epril.com/sqlmap" elementFormDefault="qualified">
+
+  <element name="sqlmap">
+    <complexType>
+      <sequence>
+        <element name="sql" maxOccurs="unbounded" type="tns:sqlType"/>
+      </sequence>
+    </complexType>
+  </element>
+  <complexType name="sqlType">
+    <simpleContent>
+      <extension base="string">
+        <attribute name="key" use="required" type="string"/>
+      </extension>
+    </simpleContent>
+  </complexType>
+</schema>
