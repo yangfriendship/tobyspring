@@ -10,3 +10,4 @@
   <sql key="userGetAll">SELECT * FROM users ORDER by id</sql>
   <sql key="userUpdate">UPDATE users SET name = ?, password = ?, level = ?, login = ?, recommend = ?, email = ? where id = ?</sql>
 </sqlmap>
+

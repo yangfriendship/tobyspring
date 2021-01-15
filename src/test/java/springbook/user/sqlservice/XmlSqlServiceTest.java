@@ -10,6 +10,7 @@ public class XmlSqlServiceTest {
     public void xmlLoadTest(){
 
         XmlSqlService sqlService = new XmlSqlService();
+        sqlService.load();
         String userAdd = sqlService.getSql("userAdd");
         System.out.println(userAdd);
     }

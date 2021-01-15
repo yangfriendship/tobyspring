@@ -2875,3 +2875,26 @@ public class XmlSqlService implements SqlService {
 }
 ```
 
+7.2.3 빈의초기화작업
+생성자를 이용한 초기화는 바람직하지 않다.`@PostConstruct`를 스프링이 관리하는 빈으로 등록될 때
+ `@PostConstruct`가 붙은 메서드는 빈을 생성 후에 실행 해준다.xml로 이루어진 `applicationContext`가
+  해당 애너테이션을 읽기 위해서는 `<context:annotation-config/ >`를 추가해야한다.
+```
+// XmlSqlService
+@PostConstruct
+    public void load(){
+        String contextPath = Sqlmap.class.getPackage().getName();
+        try {
+            JAXBContext context = JAXBContext.newInstance(contextPath);
+            Unmarshaller unmarshaller = context.createUnmarshaller();
+            Sqlmap sqlmap = (Sqlmap) unmarshaller
+                .unmarshal(getClass().getResourceAsStream(sqlmapFile));
+            for (SqlType sqlType : sqlmap.getSql()) {
+                this.sqlMap.put(sqlType.getKey(), sqlType.getValue());
+            }
+        } catch (JAXBException e) {
+            throw new RuntimeException();
+        }
+    }
+```
+
