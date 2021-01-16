@@ -2898,3 +2898,31 @@ public class XmlSqlService implements SqlService {
     }
 ```
 
+## 7.2.4 변화를 위한 준비 : 인터페이스 분리
+### 책임에 따른 인터페이스 정의
+1. SqlReader:Sql 정보를 외부의 리소스로부터 읽어오는 것
+    - Sql을 저장하고 있는 외부 리소스의 파일 형태가 변할 수 있다. ex)xml,json,txt 등등
+2. SqlRepository: Sql을 보관해두고 있다가 필요할 때 제공해주는 것
+
+### 자기 참조 빈을 이용한 의존관계 설정
+1. XmlSqlService가 의존객체를 구현하도록 한다.
+```
+ublic class XmlSqlService implements SqlService, SqlRepository, SqlReader {
+
+    private static final String ERROR_MESSAGE = "에 대한 SQL을 찾을 수 없습니다.";
+
+    private Map<String, String> sqlMap = new HashMap<String, String>();
+    private String sqlmapFile;
+    private SqlRepository sqlRepository;
+    private SqlReader sqlReader;
+    //생략..
+}
+```
+2. applicationContext.xml에서 자기참조 빈 설정
+```
+  <bean id="sqlService" class="springbook.user.sqlservice.XmlSqlService">
+    <property name="sqlmapFile" value="/sqlmap/sqlmap.xml" />
+    <property name="sqlReader" ref="sqlService" />
+    <property name="sqlRepository" ref="sqlService" />
+  </bean>
+```
