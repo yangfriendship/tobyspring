@@ -2926,3 +2926,68 @@ ublic class XmlSqlService implements SqlService, SqlRepository, SqlReader {
     <property name="sqlRepository" ref="sqlService" />
   </bean>
 ```
+
+## 7.2.6 디폴트 의존관계
+1. 기본적인 의존 관계를 설정한 BaseSqlService
+```
+public class BaseSqlService implements SqlService {
+    private SqlReader sqlReader;
+    private SqlRepository sqlRepository;
+    public void setSqlReader(SqlReader sqlReader) {
+        this.sqlReader = sqlReader;
+    }
+    public void setSqlRepository(SqlRepository sqlRepository) {
+        this.sqlRepository = sqlRepository;
+    }
+    @PostConstruct
+    public void load() {
+        this.sqlReader.read(sqlRepository);
+    }
+    @Override
+    public String getSql(String key) throws SqlRetrievalFailureException {
+        try {
+            return this.sqlRepository.findSql(key);
+        } catch (SqlNotFountException e) {
+            throw e;
+        }
+    }
+}
+```
+2. BaseSqlService를 상속한 DefaultSqlService
+DefaultSqlService는 BaseSqlService의 구현을 따르면서 필요한 의존관계 빈들을 생성과 동시에 바로 넣어준다.
+```
+public class DefaultSqlService extends BaseSqlService {
+    public DefaultSqlService() {
+        setSqlReader(new XmlSqlReader());
+        setSqlRepository(new HashMapSqlRepository());
+    }
+}
+``` 
+3. DefaultSqlService 테스트 진행시 주의사항
+BaseSqlService의 `@PostConstruct`는 스프링 컨텍스트가 제공해주는 기능이다.
+DefaultSqlService를 따로 빈으로 등록해서 실행하면 상관이 없지만
+독립적인 테스트를 위해서 직접 DefaultSqlService를 인스턴스화한 후에 테스트를 진행한다면
+직접 `load()`메서드를 실행시켜 초기화를 진행해줘야 한다.
+```
+    @Test
+    public void defaultSqlServiceTest(){
+        DefaultSqlService defaultSqlService = new DefaultSqlService();
+        defaultSqlService.load(); // 스프링이 초기화해주지 않기 때문에, 직접 초기화를 진행!
+        defaultSqlService.getSql("userDeleteAll");
+    }
+```
+4. 디폴트 설정이 되어있는 `DefaultSqlServie` 역시 `setXX`메서드를 이용해 의존관계를 변경 할 수있고
+`BaseSqlService`를 상속했기 때문에 `SqlService` 인터페이스의 변화에 별다른 설정을 하지 않아도 된다.(BaseSqlService를 변경함으로써)
+
+5. SqlFilPath 디폴트 값 설정
+sqlMap.xml의 파일 패스와 파일 명을 입력해야하지만 아래와 같이 패스의 기본값을 설정할 수 있다.
+```
+
+public class XmlSqlReader implements SqlReader {
+    private static final String DEFAULT_FILE_PATH = "/sqlmap/sqlmap.xml";
+    private String sqlmapFile = DEFAULT_FILE_PATH;
+    public void setSqlmapFile(String sqlmapFile) {
+        this.sqlmapFile = sqlmapFile;
+    }
+    // 생략...
+```

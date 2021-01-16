@@ -9,7 +9,6 @@ public class XmlSqlServiceTest {
 
     @Test
     public void xmlLoadTest(){
-
         XmlSqlService sqlService = new XmlSqlService();
         sqlService.setSqlmapFile("/sqlmap/sqlmap.xml");
         sqlService.setSqlReader(sqlService);
@@ -17,7 +16,14 @@ public class XmlSqlServiceTest {
 
         sqlService.load();
         String userAdd = sqlService.getSql("userAdd");
-        System.out.println(userAdd);
+    }
+
+    @Test
+    public void defaultSqlServiceTest(){
+        DefaultSqlService defaultSqlService = new DefaultSqlService();
+        defaultSqlService.load();
+        defaultSqlService.getSql("userDeleteAll");
+
     }
 
 }

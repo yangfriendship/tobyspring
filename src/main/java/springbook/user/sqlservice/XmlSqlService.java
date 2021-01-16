@@ -10,10 +10,11 @@ import springbook.user.exception.SqlNotFountException;
 import springbook.user.exception.SqlRetrievalFailureException;
 import springbook.user.sqlservice.jaxb.SqlType;
 import springbook.user.sqlservice.jaxb.Sqlmap;
+import springbook.user.sqlservice.reader.SqlReader;
+import springbook.user.sqlservice.repository.SqlRepository;
 
 public class XmlSqlService implements SqlService, SqlRepository, SqlReader {
 
-    private static final String ERROR_MESSAGE = "에 대한 SQL을 찾을 수 없습니다.";
 
     private Map<String, String> sqlMap = new HashMap<String, String>();
     private String sqlmapFile;
