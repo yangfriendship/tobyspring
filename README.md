@@ -3018,3 +3018,60 @@ JAXB API를 이용하여 로우레벨에서 복잡한 설정을 할 필요가 �
     <property name="contextPath" value="springbook.user.sqlservice.jaxb" />
   </bean>
 ```
+
+## 7.3.2 OXM 서비스 추상화 적용
+1. applicationContext.xml 등록
+`sqlmapFile`는 디폴트 값을 설정했기 때문에 값을 넘겨주지 않아도 된다.
+어떤 종류의 `unmarshaller` 구현체가 들어와도 `OxmSqlService`는 sql을 읽을 수 있다.
+```
+  <bean id="sqlService" class="springbook.user.sqlservice.OxmSqlService">
+    <property name="unmarshaller" ref="unmarshaller" />
+  </bean>
+
+  <bean id="unmarshaller" class="org.springframework.oxm.jaxb.Jaxb2Marshaller" >
+    <property name="contextPath" value="springbook.user.sqlservice.jaxb" />
+  </bean>
+```
+2. Oxm 추상화 인터페이스를 이용한 `OxmSqlService`
+내부에 `OxmReader`클래스를 구현
+OxmSqlService에서 `Unmarshaller`와 `sqlmapFile`을 setter 메서드로 주입받은 후
+OxmReader에게 바로 주입한다.
+```
+public class OxmSqlService implements SqlService {
+
+    private final OxmSqlReader oxmSqlReader = new OxmSqlReader();
+    private SqlRepository sqlRepository = new HashMapSqlRepository();
+
+    public void setSqlRepository(SqlRepository sqlRepository) {
+        this.sqlRepository = sqlRepository;
+    }
+
+    public void setUnmarshaller(Unmarshaller unmarshaller) {
+        oxmSqlReader.setUnmarshaller(unmarshaller);
+    }
+
+    public void setSqlmapFile(String sqlmapFile) {
+        oxmSqlReader.setSqlmapFile(sqlmapFile);
+    }
+
+    // load(), getSql() 메서드 생략..
+
+    private class OxmSqlReader implements SqlReader {
+        private static final String DEFAULT_PATH = "/sqlmap/sqlmap.xml";
+        private Unmarshaller unmarshaller;
+        private String sqlmapFile = DEFAULT_PATH;
+
+        // setter 메서드 생략      
+
+        @Override
+        public void read(SqlRepository sqlRepository) {
+            StreamSource source = new StreamSource(
+                getClass().getResourceAsStream(this.sqlmapFile));
+            try {
+                Sqlmap sqlmap = (Sqlmap) this.unmarshaller.unmarshal(source);
+                // sqlRegistry에 넣는 forEach문 생략..
+            } // catch 블럭 생략..
+        }
+    }
+}
+```
