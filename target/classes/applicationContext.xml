@@ -16,9 +16,10 @@
     <property name="sqlService" ref="sqlService"/>
   </bean>
 
-  <bean id="sqlService" class="springbook.user.sqlservice.BaseSqlService">
-    <property name="sqlReader" ref="sqlReader" />
+  <bean id="sqlService" class="springbook.user.sqlservice.OxmSqlService">
     <property name="sqlRepository" ref="sqlRegistry" />
+    <property name="unmarshaller" ref="unmarshaller" />
+    <property name="sqlmapFile" value="sqlmap/sqlmap.xml" />
   </bean>
 
   <bean id="sqlRegistry" class="springbook.user.sqlservice.repository.HashMapSqlRepository" />

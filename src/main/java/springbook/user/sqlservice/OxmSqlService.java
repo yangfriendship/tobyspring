@@ -3,6 +3,8 @@ package springbook.user.sqlservice;
 import java.io.IOException;
 import javax.annotation.PostConstruct;
 import javax.xml.transform.stream.StreamSource;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.oxm.Unmarshaller;
 import springbook.user.exception.SqlRetrievalFailureException;
 import springbook.user.sqlservice.jaxb.SqlType;
@@ -26,8 +28,8 @@ public class OxmSqlService implements SqlService {
         oxmSqlReader.setUnmarshaller(unmarshaller);
     }
 
-    public void setSqlmapFile(String sqlmapFile) {
-        oxmSqlReader.setSqlmapFile(sqlmapFile);
+    public void setSqlmapFile(Resource resource) {
+        oxmSqlReader.setSqlmapFile(resource);
     }
 
     @PostConstruct
@@ -45,30 +47,29 @@ public class OxmSqlService implements SqlService {
 
     private class OxmSqlReader implements SqlReader {
 
-        private static final String DEFAULT_PATH = "/sqlmap/sqlmap.xml";
+        private final Resource DEFAULT_PATH = new ClassPathResource("/sqlmap/sqlmap.xml");
 
         private Unmarshaller unmarshaller;
-        private String sqlmapFile = DEFAULT_PATH;
+        private Resource sqlmap = DEFAULT_PATH;
 
         public void setUnmarshaller(Unmarshaller unmarshaller) {
             this.unmarshaller = unmarshaller;
         }
 
-        public void setSqlmapFile(String sqlmapFile) {
-            this.sqlmapFile = sqlmapFile;
+        public void setSqlmapFile(Resource sqlmap) {
+            this.sqlmap = sqlmap;
         }
 
         @Override
         public void read(SqlRepository sqlRepository) {
-            StreamSource source = new StreamSource(
-                getClass().getResourceAsStream(this.sqlmapFile));
             try {
+                StreamSource source = new StreamSource(sqlmap.getInputStream());
                 Sqlmap sqlmap = (Sqlmap) this.unmarshaller.unmarshal(source);
                 for (SqlType sqlType : sqlmap.getSql()) {
                     sqlRepository.registerSql(sqlType.getKey(), sqlType.getValue());
                 }
             } catch (IOException e) {
-                throw new IllegalArgumentException(this.sqlmapFile +
+                throw new IllegalArgumentException(this.sqlmap.getFilename() +
                     "을 가져올 수 없습니다.");
             }
         }

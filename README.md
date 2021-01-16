@@ -3107,3 +3107,55 @@ public class OxmSqlService implements SqlService {
     }
 }
 ```
+
+## 7.3.3 리소스 추상화
+아직까지 리소스를 가져올 때, 파일의 위치를 코드에 넘겨주고 있다. 파일의 위치도 변동될 수 있기에 
+리스소 추상화를 통해 리팩토링
+### 리소스
+스프링은 자바에 존재하는 일관성 없는 리소스 접근 API를 추상화해서 `Resource`라는 추상화 인터페이스를 정의했다.
+1. OxmlSqlService가 `Resource`인터페이스를 의존하도록 변경
+```
+public class OxmSqlService implements SqlService {
+    //생략..
+    public void setSqlmapFile(Resource resource) {
+        oxmSqlReader.setSqlmapFile(resource);
+    }
+    //생략..
+    private class OxmSqlReader implements SqlReader {
+
+        private final Resource DEFAULT_PATH = new ClassPathResource("/sqlmap/sqlmap.xml");
+        private Unmarshaller unmarshaller;
+        private Resource sqlmap = DEFAULT_PATH;
+        //생략..
+        public void setSqlmapFile(Resource sqlmap) {
+            this.sqlmap = sqlmap;
+        }
+        @Override
+        public void read(SqlRepository sqlRepository) {
+            try {
+                StreamSource source = new StreamSource(sqlmap.getInputStream());
+                Sqlmap sqlmap = (Sqlmap) this.unmarshaller.unmarshal(source);
+                for (SqlType sqlType : sqlmap.getSql()) {
+                    sqlRepository.registerSql(sqlType.getKey(), sqlType.getValue());
+                }
+            } // catch 블럭 생략
+        }
+    }
+}
+```
+2. 어플리케이션 컨텍스트 설정 변경
+
+```
+  <bean id="sqlService" class="springbook.user.sqlservice.OxmSqlService">
+    <property name="sqlRepository" ref="sqlRegistry" />
+    <property name="unmarshaller" ref="unmarshaller" />
+    <property name="sqlmapFile" value="sqlmap/sqlmap.xml" />
+  </bean>
+```
+3. ResourceLoader 인터페이스 접두어
+| 접두어| 예| 설명|
+| ------------ | ------------ | ------------ |
+|  file: | file:/C/user/*  |  생략 |
+| classpath:  |  classpath:mapping.xml |  생략 |
+| 없음  |  WEB-INF/mapping.xml |  접두어가 없다면 <br>` ResourceLoader`  <br>의 구현에따라 결정|
+| http:  | http:www.youzheng.com/*  |  생략 |
