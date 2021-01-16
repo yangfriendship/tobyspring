@@ -3075,3 +3075,35 @@ public class OxmSqlService implements SqlService {
     }
 }
 ```
+
+### 위임을 이용한 BaseSqlService의 재사용
+BaseSqlService와 OxmSqlService에 `load()`,`getSql()`메서드가 중복적으로 나타난다.
+현재는 2개의 메서드가 중복되지만 만약 이 메서드들의 로직이 복잡하고, 수량이 많다면 당연히 리팩토링 과정이 필요하다.
+1. `load()`,`getSql()`메서드를 `BaseSqlService`에게 위임하는 방식으로 리팩토링
+```
+public class OxmSqlService implements SqlService {
+    private final BaseSqlService baseSqlService = new BaseSqlService();
+
+    private final OxmSqlReader oxmSqlReader = new OxmSqlReader();
+    private SqlRepository sqlRepository = new HashMapSqlRepository();
+
+    // setter 메서드 생략
+
+    @PostConstruct
+    public void load() {
+        this.baseSqlService.setSqlReader(this.oxmSqlReader);
+        this.baseSqlService.setSqlRepository(this.sqlRepository);
+
+        this.baseSqlService.load();
+    }
+
+    @Override
+    public String getSql(String key) throws SqlRetrievalFailureException {
+        return this.baseSqlService.getSql(key);
+    }
+
+    private class OxmSqlReader implements SqlReader {
+            // 구현 생략
+    }
+}
+```

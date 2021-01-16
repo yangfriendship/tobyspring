@@ -4,7 +4,6 @@ import java.io.IOException;
 import javax.annotation.PostConstruct;
 import javax.xml.transform.stream.StreamSource;
 import org.springframework.oxm.Unmarshaller;
-import springbook.user.exception.SqlNotFountException;
 import springbook.user.exception.SqlRetrievalFailureException;
 import springbook.user.sqlservice.jaxb.SqlType;
 import springbook.user.sqlservice.jaxb.Sqlmap;
@@ -13,6 +12,8 @@ import springbook.user.sqlservice.repository.HashMapSqlRepository;
 import springbook.user.sqlservice.repository.SqlRepository;
 
 public class OxmSqlService implements SqlService {
+
+    private final BaseSqlService baseSqlService = new BaseSqlService();
 
     private final OxmSqlReader oxmSqlReader = new OxmSqlReader();
     private SqlRepository sqlRepository = new HashMapSqlRepository();
@@ -31,16 +32,15 @@ public class OxmSqlService implements SqlService {
 
     @PostConstruct
     public void load() {
-        this.oxmSqlReader.read(this.sqlRepository);
+        this.baseSqlService.setSqlReader(this.oxmSqlReader);
+        this.baseSqlService.setSqlRepository(this.sqlRepository);
+
+        this.baseSqlService.load();
     }
 
     @Override
     public String getSql(String key) throws SqlRetrievalFailureException {
-        try {
-            return this.sqlRepository.findSql(key);
-        } catch (SqlNotFountException e) {
-            throw e;
-        }
+        return this.baseSqlService.getSql(key);
     }
 
     private class OxmSqlReader implements SqlReader {
