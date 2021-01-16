@@ -2991,3 +2991,30 @@ public class XmlSqlReader implements SqlReader {
     }
     // 생략...
 ```
+
+## 7.3.1 OXM 서비스 추상화
+####OXM : Object/XML Mapper 오브젝트와 XML형식의 파일간의 바인딩 기술
+마샬링(Marshall) = 오브젝트 -> XML 변환 
+언 마샬링(UnMarshall) = XML -> 오브젝트 변환
+자바를 위한 OXM기술 또한 여러가지 종류가 있다. 스프링은 이러한 OXM들 간 추상화 인터페이스를 지원한다.
+
+### OXM 서비스 인터페이스
+1. OXM 서비스를 위한 인터페이스
+```
+package org.springframework.oxm;
+import java.io.IOException;
+import javax.xml.transform.Source;
+
+public interface Unmarshaller {
+    boolean supports(Class<?> var1);
+
+    Object unmarshal(Source var1) throws IOException, XmlMappingException;
+}
+```
+2. `Unmarshaller`인터페이스를 구현한 `Jaxb2Marshaller`를 빈으로 등록
+JAXB API를 이용하여 로우레벨에서 복잡한 설정을 할 필요가 없다.
+```
+  <bean id="unmarshaller" class="org.springframework.oxm.jaxb.Jaxb2Marshaller" >
+    <property name="contextPath" value="springbook.user.sqlservice.jaxb" />
+  </bean>
+```
