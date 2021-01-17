@@ -3719,3 +3719,72 @@ public class AppContext {
     @Profile("production")
     public static class ProductionAppConfig {...}
 ```
+
+### `@PropertySource`
+xml,txt 등 외부 리소스 파일 불러들이는 애너테이션
+1. 데이터를 저장할 `.properties`파일 생성 
+```
+//database.properties
+db.driverClass=com.mysql.cj.jdbc.Driver
+db.url=jdbc:mysql://127.0.0.1:3306/book?useSSL=false&serverTimezone=Asia/Seoul
+db.username=root
+db.password=1234
+```
+2. `Environment`오브젝트를 이용해 데이터를 읽어들인다.
+- `@PropertySource`를 이용하여 읽어들일 파일을 설정한다.
+- `Environment`오브젝트를 이용해서 값을 찾아올 수 있다.
+- 드라이버를 넘길때는 Class타입의 파라미터를 넘겨야하지만, 프로퍼티에 저장된 값은 테스트 형식이기 때문에
+  형변환을 해서 넘겨야한다.
+- 드라이버를 찾지 못했을 경우에는 런타임 에러를 발생시키도록 설정!
+```
+//기타 애너테이션 생략
+@PropertySource("/database.properties")
+public class AppContext {
+    @Autowired
+    Environment env;
+    @Bean
+    public DataSource dataSource() {
+        SimpleDriverDataSource dataSource = new SimpleDriverDataSource();
+        try {
+            dataSource.setDriverClass((Class<? extends java.sql.Driver>)Class.forName(env.getProperty("db.driverClass")) );
+        }catch (ClassNotFoundException e){
+            throw new RuntimeException();
+        }
+        dataSource.setUrl(env.getProperty("db.url"));
+        dataSource.setUsername(env.getProperty("db.username"));
+        dataSource.setPassword(env.getProperty("db.password"));
+        return dataSource;
+    }
+```
+### PropertySourcesPlaceholderConfigurer (@Value)
+치환자(PlaceHolder)를 이용한 값 주입
+@Value를 통해서 값을 얻어올 수 있다. 
+`Driver`은 `Class`타입의 값을 받아야 하지만, xml 설정과 비슷하게 String으로 받은 값을
+`Clsss`타입으로 자동 변환해준다.`PropertySourcesPlaceholderConfigurer`프로퍼티를 얻어오려면
+`PropertySourcesPlaceholderConfigurer`를 `static`빈으로 등록해줘야 한다.
+
+```
+@PropertySource("/database.properties")
+public class AppContext {
+    @Value("${db.url}")
+    private String url;
+    @Value("${db.driverClass}")
+    private Class<? extends Driver> driverClass;
+    @Value("${db.username}")
+    private String userName;
+    @Value("${db.password}")
+    private String password;
+    @Bean
+    public static PropertySourcesPlaceholderConfigurer placeholderConfigurer(){
+        return new PropertySourcesPlaceholderConfigurer();
+    }
+    @Bean
+    public DataSource dataSource() {
+        SimpleDriverDataSource dataSource = new SimpleDriverDataSource();
+        dataSource.setUrl(this.url);
+        dataSource.setDriverClass(this.driverClass);
+        dataSource.setUsername(this.userName);
+        dataSource.setPassword(this.password);
+        return dataSource;
+    }
+```
