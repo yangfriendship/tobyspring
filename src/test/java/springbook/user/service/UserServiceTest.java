@@ -18,25 +18,26 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.dao.TransientDataAccessResourceException;
 import org.springframework.mail.MailSender;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.annotation.NotTransactional;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 import springbook.config.AppContext;
-import springbook.config.TestAppConfig;
 import springbook.user.Level;
 import springbook.user.User;
 import springbook.user.dao.UserDao;
 import springbook.user.service.TestUserService.TestUserServiceException;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(classes = {AppContext.class, TestAppConfig.class})
+@ContextConfiguration(classes = AppContext.class)
+@ActiveProfiles("test")
 public class UserServiceTest {
 
     @Autowired
@@ -47,9 +48,17 @@ public class UserServiceTest {
     private PlatformTransactionManager transactionManager;
     @Autowired
     private UserService testUserService;
+    @Autowired
+    private DefaultListableBeanFactory beanFactory;
 
     private List<User> users;
 
+    @Test
+    public void beans() {
+        for (String bean : beanFactory.getBeanDefinitionNames()) {
+            System.out.println(bean);
+        }
+    }
 
     @Before
     public void setUp() {

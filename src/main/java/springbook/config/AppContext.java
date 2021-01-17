@@ -14,8 +14,10 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @Configuration
 @ComponentScan(basePackages = "springbook.user")
 @EnableTransactionManagement
-@Import(SqlServiceContext.class)
+@Import({SqlServiceContext.class,TestAppConfig.class,ProductionAppContext.class})
 public class AppContext {
+
+
 
     @Bean
     public DataSource dataSource() {

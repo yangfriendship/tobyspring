@@ -3650,3 +3650,72 @@ public class SqlServiceContext {
 }
 ```
 
+## 7.6.4 프로파일
+운영 환경 뿐만 아니라 테스트 실행 환경에서도 배제되어야 할 빈은 따로 관리되어야 한다.
+1. Mail 발송기능을 구현한 `JavaMailSenderImpl()`를 `ProductionAppContext` 설정 클래스로 옮기자!(코드생략) 
+
+### @Profile과 @ActiveProfiles
+실행환경 마다 다른 빈 구성을 사용하도록 설정할 수 있다.
+1. 테스트에서 사용될 빈이 들어있는 설정 클래스에 아래와 같이 `@Profile(["name"])`을 지정해 준다.
+```
+@Configuration
+@Profile("test")
+public class TestAppConfig {
+}
+```
+2. `@Profile`로 설정된 설정 클래스의 빈을 사용할 테스트 클래스에 아래와 같이 `@ActiveProfiles("test")`
+설정한다. 
+```
+@Configuration
+@Profile("production")
+public class ProductionAppContext {
+```
+```
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(classes = {AppContext.class, TestAppConfig.class})
+@ActiveProfiles("test")
+public class UserServiceTest {
+```
+3. 상위 두 가지 빈 설정을 `AppContext`에 `@Import`한다.
+```
+@Configuration
+@ComponentScan(basePackages = "springbook.user")
+@EnableTransactionManagement
+@Import({SqlServiceContext.class,TestAppConfig.class,ProductionAppContext.class})
+public class AppContext {
+```
+4. 테스트를 실행하면 테스트 클래스에 등록(@ActiveProfiles)되어있는 빈 설정을 사용하여 테스트가 진행된다.
+
+### 컨테이너 빈 등록 정보 확인
+`DefaultListableBeanFactory`를 주입 받으면 스프링 컨텍스트가 관리하고 있는 빈들의 정보를 얻어올 수 있다.
+```
+    @Autowired
+    private DefaultListableBeanFactory beanFactory;
+    @Test
+    public void beans(){
+        for(String bean : beanFactory.getBeanDefinitionNames()){
+            System.out.println(bean);
+        }
+    }
+``` 
+
+### 중접 클래스를 이용한 프로파일 적용
+빈 설정 파일을 여러개로 분리했다. 전체 구성이 쉽지 않다. 스태틱 중첩 클래스를 이용하여 소스코드 정리!
+TestAppconfig와 ProductionAppconfig는 AppContext에 더이상 임포트할 필요가 없다.
+AppContext가 빈으로 등록될 때, Inner클래스로 등록된 두 개의 빈을 자동으로 등록해준다.
+하지만, 내부에 등록된 설정클래스는 꼭 `static`을 이용해서 설정해야한다.  
+```
+@Configuration
+@ComponentScan(basePackages = "springbook.user")
+@EnableTransactionManagement
+@Import(SqlServiceContext.class)
+public class AppContext {
+
+    @Configuration
+    @Profile("test")
+    public static class TestAppConfig {...}
+
+    @Configuration
+    @Profile("production")
+    public static class ProductionAppConfig {...}
+```
