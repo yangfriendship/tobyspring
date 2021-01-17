@@ -22,7 +22,8 @@
     <property name="sqlmapFile" value="sqlmap/sqlmap.xml" />
   </bean>
 
-  <bean id="sqlRegistry" class="springbook.user.sqlservice.repository.HashMapSqlRepository" />
+
+  <bean id="sqlRegistry" class="springbook.user.sqlservice.repository.ConcurrentHashMapSqlRegistry" />
 
   <bean id="sqlReader" class="springbook.user.sqlservice.reader.XmlSqlReader" >
     <property name="sqlmapFile" value="/sqlmap/sqlmap.xml" />

@@ -3159,3 +3159,95 @@ public class OxmSqlService implements SqlService {
 | classpath:  |  classpath:mapping.xml |  생략 |
 | 없음  |  WEB-INF/mapping.xml |  접두어가 없다면 <br>` ResourceLoader`  <br>의 구현에따라 결정|
 | http:  | http:www.youzheng.com/*  |  생략 |
+
+## 7.4.1 DI와 기능의 확장
+
+### DI를 의식하는 설계
+- DI의 가치를 제대로 누리려면 DI를 의식한 설계가 필수
+- 객체지향 설계를 잘 하려면 여러 방법이 있겠지만, 스프링에서는 DI가 짱!
+- 객체간 책임을 고려한 후 적절히 분리해야 한다.
+- DI는 런타임 시에 의존 오브젝트를 다이나믹하게 연결해줘서 유연한 확장을 꾀하는게 목적!
+- 항상 오브젝트 사이의 관계를 생각해야한다!
+- `DI`란 결국 미래를 프로그래밍하는 것이다!
+
+### DI와 인터페이스 프로그래밍
+- DI답게 만드려면 `인터페이스`를 통해 의존하는 오브젝트을 느슨하게 만들어야 한다.
+- 인터페이스를 사용하면 `다형성`을 적극 확용할 수 있다.
+- 각자의 관심과 필요에 따라서 다른 인터페이스로 접근한다.
+- 클라이언트가 정말 필요한 기능을 가진 인터페이스를 통해 오브젝트에 접근하도록 설계해야한다.
+
+## 7.5.1 ConcurrentHashMap을 이용한 수정 가능 SQL 레지스트리
+멀티 스레드에서 안전한 `ConcurrentHashMap`을 이용한 Sql 레지스트리를 만든다.
+1. Sql 수정 기능이 추라된 `UpdateTableSqlRegistry`
+`SqlRegistry`의 서브인터페이스
+```
+public interface UpdateTableSqlRegistry extends SqlRegistry {
+    void updateSql(String key, String sql) throws SqlUpdateFailureException;
+    void updateSql(Map<String, String> sqlmap) throws SqlUpdateFailureException;
+}
+``` 
+
+2. 테스트 코드 작성
+```
+public class ConcurrentHashMapSqlRegistryTest {
+
+    private UpdateTableSqlRegistry sqlRegistry;
+
+    @Before
+    public void setUp() {
+        sqlRegistry = new ConcurrentHashMapSqlRegistry();
+        sqlRegistry.registerSql("KEY1", "SQL1");
+        sqlRegistry.registerSql("KEY2", "SQL2");
+        sqlRegistry.registerSql("KEY3", "SQL3");
+    }
+
+    private void checkFindResult(String expected1, String expected2, String expected3) {
+        Assert.assertEquals(expected1, sqlRegistry.findSql("KEY1"));
+        Assert.assertEquals(expected2, sqlRegistry.findSql("KEY2"));
+        Assert.assertEquals(expected3, sqlRegistry.findSql("KEY3"));
+    }
+
+    @Test(expected = SqlNotFountException.class)
+    public void unknownKey() {
+        sqlRegistry.findSql("UNKNOWN_KEY");
+    }
+
+    @Test
+    public void updateSingle() {
+        sqlRegistry.updateSql("KEY2", "Modified2");
+        checkFindResult("SQL1", "Modified2", "SQL3");
+    }
+
+    @Test(expected = SqlUpdateFailureException.class)
+    public void updateWithNotExistingKey(){
+        sqlRegistry.updateSql("UNKNOWN_KEY","Modified2");
+    }
+}
+```
+
+3. ConcurrentHashMapSqlRegistry
+내부에 Sql을 저장하는 자료구조가 `ConcurrentHashMap`으로 되어있다.
+```
+public class ConcurrentHashMapSqlRegistry implements UpdateTableSqlRegistry {
+
+    private Map<String, String> sqlmap = new ConcurrentHashMap<String, String>();
+    // find(),register() 메서드 생략
+
+    @Override
+    public void updateSql(String key, String sql) throws SqlUpdateFailureException {
+        if (!this.sqlmap.containsKey(key)) {
+            throw new SqlUpdateFailureException(key + "를 이용해서 Sql을 찾을 수 없습니다.");
+        }
+        this.sqlmap.put(key, sql);
+    }
+
+    @Override
+    public void updateSql(Map<String, String> sqlmap) throws SqlUpdateFailureException {
+        for (Entry<String, String> sql : sqlmap.entrySet()) {
+            updateSql(sql.getKey(), sql.getValue());
+        }
+    }
+}
+```
+
+

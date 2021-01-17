@@ -11,16 +11,16 @@ import springbook.user.sqlservice.jaxb.SqlType;
 import springbook.user.sqlservice.jaxb.Sqlmap;
 import springbook.user.sqlservice.reader.SqlReader;
 import springbook.user.sqlservice.repository.HashMapSqlRepository;
-import springbook.user.sqlservice.repository.SqlRepository;
+import springbook.user.sqlservice.repository.SqlSqlRegistry;
 
 public class OxmSqlService implements SqlService {
 
     private final BaseSqlService baseSqlService = new BaseSqlService();
 
     private final OxmSqlReader oxmSqlReader = new OxmSqlReader();
-    private SqlRepository sqlRepository = new HashMapSqlRepository();
+    private SqlSqlRegistry sqlRepository = new HashMapSqlRepository();
 
-    public void setSqlRepository(SqlRepository sqlRepository) {
+    public void setSqlRepository(SqlSqlRegistry sqlRepository) {
         this.sqlRepository = sqlRepository;
     }
 
@@ -61,7 +61,7 @@ public class OxmSqlService implements SqlService {
         }
 
         @Override
-        public void read(SqlRepository sqlRepository) {
+        public void read(SqlSqlRegistry sqlRepository) {
             try {
                 StreamSource source = new StreamSource(sqlmap.getInputStream());
                 Sqlmap sqlmap = (Sqlmap) this.unmarshaller.unmarshal(source);
