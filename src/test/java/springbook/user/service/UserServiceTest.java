@@ -50,8 +50,6 @@ public class UserServiceTest {
     private PlatformTransactionManager transactionManager;
     @Autowired
     private UserService testUserService;
-    @Autowired
-    private ApplicationContext context;
 
     private List<User> users;
 

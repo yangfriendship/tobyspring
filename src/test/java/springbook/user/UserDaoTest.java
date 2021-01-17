@@ -13,6 +13,7 @@ import org.springframework.context.support.GenericXmlApplicationContext;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.support.SQLErrorCodeSQLExceptionTranslator;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import springbook.user.dao.DaoFactory;
@@ -38,11 +39,14 @@ public class UserDaoTest {
     public void setUp() {
         userDao.deleteAll();
 
-        this.context = new GenericXmlApplicationContext(
-            "applicationContext.xml");
         this.user1 = new User("1", "youzheng", "ps1", Level.BASIC, 1, 0, "youzheng1@gmail.com");
         this.user2 = new User("2", "woojung", "ps2", Level.SILVER, 55, 10, "youzheng2@gmail.com");
         this.user3 = new User("3`", "yang", "ps3", Level.GOLD, 100, 40, "youzheng3@gmail.com");
+    }
+
+    @Test
+    public void embeddedDbRegisterTest(){
+        System.out.println("ddd");
     }
 
     @Test
@@ -75,13 +79,6 @@ public class UserDaoTest {
         UserDao userDao2 = factory.userDao();
 
         Assert.assertNotSame(userDao1, userDao2);
-    }
-
-    @Test
-    public void appContextSingleTonTest() {
-        UserDao userDao1 = context.getBean("userDao", UserDao.class);
-        UserDao userDao2 = context.getBean("userDao", UserDao.class);
-        Assert.assertSame(userDao1, userDao2);
     }
 
     @Test

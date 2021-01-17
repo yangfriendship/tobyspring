@@ -3250,4 +3250,122 @@ public class ConcurrentHashMapSqlRegistry implements UpdateTableSqlRegistry {
 }
 ```
 
+## 7.5.2 내장형 데이터베이스를 이용한 SQL 레지스트리 만들기
+`ConcurrentHashMap`은 멀티스레드 환경에서 동시성을 보장해주지만, 데이터베이스 만큼 유용하지는 못하기 때문에 내장형 DB를 이용하도록 수정한다.
+내장형 데이터베이스 : 애플리케이션에 내장돼어 함께 시작되고 함께 종료되는 DB를 말한다. 데이터는 메모리에 저장되기 때문에
+IO로 발생하는 부하가 적어서 성능이 뛰어나다.
 
+### 스프링의 내장형 DB 지원 기능(Derby, HSQL, H2)
+- 내장형 DB를 사용하게 하는 기능을 지원
+- 별도의 레이어와 인터페이스는 지원하지 않는다.
+- 내장형 DB를 초기화하는 작업을 지원하는 내장형 DB 벌더를 제공
+```
+package org.springframework.jdbc.datasource.embedded;
+import javax.sql.DataSource;
+public interface EmbeddedDatabase extends DataSource {
+    void shutdown();
+}
+```
+- EmbeddedDatabase
+```
+        this.database = new EmbeddedDatabaseBuilder()
+            .setType(EmbeddedDatabaseType.HSQL)
+            .addScript("/sqlmap/sqlmapSchema.sql")
+            .addScript("/sqlmap/data.sql")
+            .build();
+```
+`setType` : 내장형 DB 타입 설정 (Derby, HSQL, H2)
+`addScript` : 불러들일 `.sql`형식의 파일 위치를 넣어준다.
+    ```
+    //sqlmapSchema.sql
+    CREATE TABLE SQLMAP (
+        KEY_ VARCHAR(100) PRIMARY KEY ,
+        SQL_ VARCHAR(100) NOT NULL
+    );
+    //data.sql
+    INSERT INTO SQLMAP (KEY_,SQL_) VALUES('KEY1','SQL1');
+    INSERT INTO SQLMAP (KEY_,SQL_) VALUES('KEY2'
+    ```
+### 내장형 DB를 이용한 SqIRegistry 만들기
+네임스페이스를 이용한 `EmbeddedDatabase` 등록 // 뒤에 다시 설명
+```
+  <jdbc:embedded-database id="embeddedDatabase" type="HSQL" >
+    <jdbc:script location="sqlmap/sqlmapSchema.sql"/>
+  </jdbc:embedded-database>
+```
+
+### UpdateTableSqIRegistry 테스트 코드의 재사용
+1. 기본 테스트로 추출 추상클래스로 설계한다.
+테스트에 이용될 `UpdateTableSqlRegistry`의 구현체를 서브클래스에서 `createSqlRegistry()`메서드로
+설정하도록 한다. `checkFindResult()` 검사로직 또한 서브클래스에서 변경될 가능성이 있기 때문에 `protetcted`로 설정!
+```
+public abstract class AbstractSqlRegistryTest {
+    protected UpdateTableSqlRegistry sqlRegistry;
+    protected Map<String, String> sqlmap;
+    @Before
+    public void setUp() {
+
+        sqlmap = new HashMap<String, String>();
+        sqlmap.put("KEY1", "SQL1");
+        sqlmap.put("KEY2", "SQL2");
+        sqlmap.put("KEY3", "SQL3");
+        sqlRegistry = createSqlRegistry();
+
+        for(Entry<String,String> sql : sqlmap.entrySet()){
+            sqlRegistry.registerSql(sql.getKey(),sql.getValue());
+        }
+    }
+    protected abstract UpdateTableSqlRegistry createSqlRegistry();
+    protected void checkFindResult(String expected1, String expected2, String expected3) {
+        Assert.assertEquals(expected1, sqlRegistry.findSql("KEY1"));
+        Assert.assertEquals(expected2, sqlRegistry.findSql("KEY2"));
+        Assert.assertEquals(expected3, sqlRegistry.findSql("KEY3"));
+    }
+}
+```
+2. 수정된 `ConcurrentUpdateTableSqlRegistry`의 테스트 코드
+테스트에 이용될 구현체만 `createSqlRegistry()`메서드를 통해서 생성한다.
+```
+public class ConcurrentHashMapSqlRegistryTest extends AbstractSqlRegistryTest {
+
+    @Override
+    protected UpdateTableSqlRegistry createSqlRegistry() {
+        return new ConcurrentHashMapSqlRegistry();
+    }
+}
+```
+3. `EmbeddedDbSqlRegistry` 테스트
+마찬가지로 테스트에 이용될 구현체만 `createSqlRegistry()`메서드를 통해서 생성한다.
+` database.shutdown()` 메서드를 통해서 테스트가 완료되면 내장형 DB를 닫아줘야 한다.
+닫지 않으면, `각 테스트마다 내장형 DB를 생성하기 때문에 에러 발생`
+```
+public class EmbeddedSqlRegistryTest extends AbstractSqlRegistryTest {
+    private EmbeddedDatabase database;
+    @Override
+    protected UpdateTableSqlRegistry createSqlRegistry() {
+        database = new EmbeddedDatabaseBuilder()
+            .setType(EmbeddedDatabaseType.HSQL)
+            .addScript("/sqlmap/sqlmapSchema.sql")
+            .build();
+        EmbeddedDbSqlRegistry registry = new EmbeddedDbSqlRegistry();
+        registry.setDataSource(database);
+        return registry;
+    }
+    @After
+    public void tearDown() {
+        database.shutdown();
+    }
+```
+4. `<jdbc:embedded-database >`를 이용한 EmbeddedDb 등록
+- 직접 `shutdown()`메서드로 DB를 닫아 줄 필요가 없다. 스프링이 해준다!
+- `type="[DBType]"` 손쉽게 DB종류를 변경할 수 있다.
+```
+  <jdbc:embedded-database id="embeddedDatabase" type="HSQL">
+    <jdbc:script location="sqlmap/sqlmapSchema.sql"/>
+  </jdbc:embedded-database>
+
+
+  <bean id="sqlRegistry" class="springbook.user.sqlservice.repository.EmbeddedDbSqlRegistry">
+    <property name="dataSource" ref="embeddedDatabase"/>
+  </bean>
+```
