@@ -3589,3 +3589,64 @@ public class TestUserService extends UserServiceImpl {
 public class UserServiceImpl implements UserService {
 ```
 
+## 7.6.3 컨텍스트 분리와 @Import
+1. Test용 빈 설정 분리
+TestAppContext(테스트용빈)과 AppContext을 분리한다.
+```
+@Configuration
+public class TestAppConfig {
+    @Bean
+    public UserService testUserService() {
+        return new TestUserService();
+    }
+
+    @Bean
+    public MailSender mailSender() {
+        return new DummyMailSender();
+    }
+}
+```
+2. 테스트 클래스 수정
+`@ContextConfiguration`애노테이션에 본 컨텍스트 설정 클래스와, 테스트용 클래스를 같이 등록해줘야 한다.
+```
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(classes = {AppContext.class, TestAppConfig.class})
+public class UserDaoTest {
+```
+
+3. @Import
+성격이 다른 빈들을 분리한다. 현재 어플리케이션에서는 `SqlService`관련 빈들이 성격이 다르기 때문에 분리
+- 메인으로 사용할 설정 클래스에 `@Import`를 추가한다.
+  TestAppContext같은 경우에는 성격이 다른 문제가 아니라, 테스트용 코드 설정 빈이기 때문에 메인 설정에 임포트를 하기 보다는
+  테스트 코드에서 추가하는게 바람직하다. 
+```
+@Configuration
+@ComponentScan(basePackages = "springbook.user")
+@EnableTransactionManagement
+@Import(SqlServiceContext.class)
+public class AppContext {
+```
+- SqlServiceContext 생성
+```
+package springbook.config;
+@Configuration
+public class SqlServiceContext {
+    @Bean
+    public DataSource embeddedDatabase() {
+        //생략
+    }
+    @Bean
+    public SqlRegistry sqlRegistry() {
+        //생략
+    }
+    @Bean
+    public SqlService sqlService() {
+        //생략
+    }
+    @Bean
+    public Unmarshaller unmarshaller() {
+        //생략
+    }
+}
+```
+

@@ -14,13 +14,13 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.support.SQLErrorCodeSQLExceptionTranslator;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import springbook.config.TestApplicationContext;
+import springbook.config.AppContext;
+import springbook.config.TestAppConfig;
 import springbook.user.dao.DaoFactory;
 import springbook.user.dao.UserDao;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-//@ContextConfiguration(locations = "/applicationContext.xml")
-@ContextConfiguration(classes = TestApplicationContext.class)
+@ContextConfiguration(classes = {AppContext.class, TestAppConfig.class})
 public class UserDaoTest {
 
     @Autowired

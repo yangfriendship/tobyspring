@@ -28,14 +28,15 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
-import springbook.config.TestApplicationContext;
+import springbook.config.AppContext;
+import springbook.config.TestAppConfig;
 import springbook.user.Level;
 import springbook.user.User;
 import springbook.user.dao.UserDao;
 import springbook.user.service.TestUserService.TestUserServiceException;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(classes = TestApplicationContext.class)
+@ContextConfiguration(classes = {AppContext.class, TestAppConfig.class})
 public class UserServiceTest {
 
     @Autowired
@@ -195,7 +196,6 @@ public class UserServiceTest {
     }
 
     @Test(expected = TransientDataAccessResourceException.class)
-    @NotTransactional
     public void readOnlyExceptionTest() {
 
         this.userDao.addAll(this.users);
