@@ -3369,3 +3369,55 @@ public class EmbeddedSqlRegistryTest extends AbstractSqlRegistryTest {
     <property name="dataSource" ref="embeddedDatabase"/>
   </bean>
 ```
+
+## 7.5.3 트랜잭션 적용
+자료구조(HashMap,ConCurrentHashMap) 등을 이용해셔 `SqlRegistry`를 구현하면 트랜잭션을 사실상 적용할 수 없다.
+내장형 DB를 시용히는 경우에는 트랜잭션 적용이 상대적으로 쉽다.
+
+### 다중 SQL 수정에 대한 트랜잭션 테스트
+
+1. 테스트 케이스 작성
+존재하지 않는 key를 변경하면 `SqlUpdateFailureException`이 발생한다.
+```
+    @Test
+    public void transactionUpdateTest(){
+        checkFindResult("SQL1","SQL2","SQL3");
+
+        Map<String,String> sqlmap = new HashMap<String, String>();
+        sqlmap.put("KEY1","Modified1");
+        sqlmap.put("UNKNOWN_KEY","Modified9999");
+
+        try{
+            super.sqlRegistry.updateSql(sqlmap);
+            fail();
+        }catch (SqlUpdateFailureException e){
+            checkFindResult("SQL1","SQL2","SQL3");
+        }
+    }
+```
+2. `TransactionTemplate`와 `TransactionCallbackWithoutResult`을 이용해 트랜잭션 기능 추가
+Sql을 저장하고 있는 내장형 DB는 어플리케이션 전체적인 부분에서 사용되는 부분이 아니다.
+따로 `PlatformTransactionManager`를 구현할 필요가 없기 때문에, 간단한 `TransactionTemplate`를 사용
+```
+public class EmbeddedDbSqlRegistry implements UpdateTableSqlRegistry {
+
+    private SimpleJdbcTemplate template;
+    private TransactionTemplate transactionTemplate;
+    public void setDataSource(DataSource dataSource) {
+        this.template = new SimpleJdbcTemplate(dataSource);
+        this.transactionTemplate = new TransactionTemplate(
+            new DataSourceTransactionManager(dataSource));
+    }
+    // 트랜잭션이 필요한 로직
+    public void updateSql(final Map<String, String> sqlmap) throws SqlUpdateFailureException {
+        transactionTemplate.execute(new TransactionCallbackWithoutResult() {
+            @Override
+            protected void doInTransactionWithoutResult(TransactionStatus transactionStatus) {
+                for (Entry<String, String> entry : sqlmap.entrySet()) {
+                    updateSql(entry.getKey(), entry.getValue());
+                }
+            }
+        });
+    }
+}
+```

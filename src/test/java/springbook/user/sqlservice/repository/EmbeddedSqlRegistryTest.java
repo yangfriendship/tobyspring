@@ -1,5 +1,9 @@
 package springbook.user.sqlservice.repository;
 
+import static junit.framework.Assert.fail;
+
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -37,6 +41,22 @@ public class EmbeddedSqlRegistryTest extends AbstractSqlRegistryTest {
     @After
     public void tearDown() {
         database.shutdown();
+    }
+
+    @Test
+    public void transactionUpdateTest(){
+        checkFindResult("SQL1","SQL2","SQL3");
+
+        Map<String,String> sqlmap = new HashMap<String, String>();
+        sqlmap.put("KEY1","Modified1");
+        sqlmap.put("UNKNOWN_KEY","Modified9999");
+
+        try{
+            super.sqlRegistry.updateSql(sqlmap);
+            fail();
+        }catch (SqlUpdateFailureException e){
+            checkFindResult("SQL1","SQL2","SQL3");
+        }
     }
 
     class TestUpdateTableSqlRegistry extends EmbeddedDbSqlRegistry {

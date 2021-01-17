@@ -2,20 +2,26 @@ package springbook.user.sqlservice.repository;
 
 import java.util.Map;
 import java.util.Map.Entry;
-import javax.annotation.PreDestroy;
 import javax.sql.DataSource;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.simple.SimpleJdbcTemplate;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallbackWithoutResult;
+import org.springframework.transaction.support.TransactionTemplate;
 import springbook.user.exception.SqlNotFountException;
 import springbook.user.exception.SqlUpdateFailureException;
 
 public class EmbeddedDbSqlRegistry implements UpdateTableSqlRegistry {
 
     private SimpleJdbcTemplate template;
+    private TransactionTemplate transactionTemplate;
 
     public void setDataSource(DataSource dataSource) {
         this.template = new SimpleJdbcTemplate(dataSource);
+        this.transactionTemplate = new TransactionTemplate(
+            new DataSourceTransactionManager(dataSource));
     }
 
     @Override
@@ -26,11 +32,17 @@ public class EmbeddedDbSqlRegistry implements UpdateTableSqlRegistry {
         }
     }
 
+    // 트랜잭션이 필요한 로직
     @Override
-    public void updateSql(Map<String, String> sqlmap) throws SqlUpdateFailureException {
-        for (Entry<String, String> entry : sqlmap.entrySet()) {
-            updateSql(entry.getKey(), entry.getValue());
-        }
+    public void updateSql(final Map<String, String> sqlmap) throws SqlUpdateFailureException {
+        transactionTemplate.execute(new TransactionCallbackWithoutResult() {
+            @Override
+            protected void doInTransactionWithoutResult(TransactionStatus transactionStatus) {
+                for (Entry<String, String> entry : sqlmap.entrySet()) {
+                    updateSql(entry.getKey(), entry.getValue());
+                }
+            }
+        });
     }
 
     @Override
