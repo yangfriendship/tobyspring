@@ -3532,5 +3532,60 @@ public class TestApplicationContext {
         return marshaller;
     }
 }
-
 ```
+
+## 7.6.2 빈 스캐닝과 자동와이어링
+### `@Autowired`를 이용한 자동와이어링
+- setter메서드에 `@AutoWired`를 붙여도 스프링 컨텍스트는 자동으로 의존 객체를 주입해준다.
+ -필드 변수에 `@AutoWired`를 추가해도 의존 객체를 추가해준다.
+- `UserDaoJdbc`에는 `DataSource` 구현체가 직접적으로 사용되는 것이 아니라
+    주입받은 후, `JdbcTemplate`의 구현체에 파라미터를 전달하는 용도로 사용되기 때문에    
+    setter 메서드를 통해서 주입받는 방법 밖에 없다.
+```
+public class UserDaoJdbc implements UserDao {
+    private JdbcTemplate jdbcTemplate;
+    @Autowired
+    private SqlService sqlService;
+
+    @Autowired
+    public void setDataSource(DataSource dataSource) {
+        this.jdbcTemplate = new JdbcTemplate(dataSource);
+    }
+}
+```
+
+### `@Component`를 이용한 자동 빈 등록
+- `@Component`가 붙은 클래스는 자동으로 스프링 컨텍스트가 관리하는 빈으로 등록된다.
+- 빈을 사용할 설정클래스(`@Configuration`)에 `@ComponentScan(basePackages = "[classPackage]")` 추가한다.
+- `@ComponentScan(basePackages = "[classPackage])`를 뒤져서 `@Component`가 붙은 빈을 찾아서 빈으로 등록한다.
+- @Component(`beanName`)을 지정할 수 있다. 만약 지정하지 않는다면 클래스 이름을 기준으로 `카멜케이스`로 변환된 이름을 사용
+
+1. `@Component`를 이용한 빈 등록
+```
+@Component
+public class UserDaoJdbc implements UserDao {
+    // 생략..
+}
+```
+2. `@ComponentScan`을 이용한 스캔 범위 설정
+```
+@Configuration
+@ComponentScan(basePackages = "springbook.user")
+@EnableTransactionManagement
+public class TestApplicationContext {
+}
+```
+3. `@Autowired`가 빈을 찾는 기준
+    - 빈의 속성으로 검색
+    - 같은 속성의 빈이 2개 이상이라면 이름을 기준으로 결정
+    - 동일한 인터페이스를 구현한 구현체가 2개 이상이 빈으로 등록된다면 각 객체에 이름일 설정
+```
+@Service("testUserService")
+public class TestUserService extends UserServiceImpl {
+}
+//
+
+@Service("userService")
+public class UserServiceImpl implements UserService {
+```
+

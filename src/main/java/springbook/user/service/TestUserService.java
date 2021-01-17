@@ -1,8 +1,10 @@
 package springbook.user.service;
 
 import java.util.List;
+import org.springframework.stereotype.Service;
 import springbook.user.User;
 
+@Service("testUserService")
 public class TestUserService extends UserServiceImpl {
 
     private static final String DEFAULT_TARGET_ID = "4";

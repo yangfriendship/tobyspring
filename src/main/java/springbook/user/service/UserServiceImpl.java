@@ -1,18 +1,24 @@
 package springbook.user.service;
 
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.MailSender;
 import org.springframework.mail.SimpleMailMessage;
+import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Service;
 import springbook.user.Level;
 import springbook.user.User;
 import springbook.user.dao.UserDao;
 
+@Service("userService")
 public class UserServiceImpl implements UserService {
 
     public static final int MIN_LOGIN_COUNT_FOR_SILVER = 50;
     public static final int MIN_RECOMMEND_COUNT_FOR_SILVER = 30;
 
+    @Autowired
     private UserDao userDao;
+    @Autowired
     private MailSender mailSender;
 
     public void setMailSender(MailSender mailSender) {
@@ -84,7 +90,7 @@ public class UserServiceImpl implements UserService {
         message.setSubject("업그레이드 안내");
         message.setText("사용자님의 등급이 " + user.getLevel().name() + "으로 업그레이드되었습니다.");
 
-        mailSender.send(message);
+            mailSender.send(message);
     }
 
     private boolean canUpgradeUser(User user) {
