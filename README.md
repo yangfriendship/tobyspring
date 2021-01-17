@@ -3422,3 +3422,115 @@ public class EmbeddedDbSqlRegistry implements UpdateTableSqlRegistry {
 }
 ```
 
+## 7.6.1 자바 코드를 이용한 빈 설정
+스프링 3.1 부터 애너페이션을 통한 빈 설정이 편리해졌다.(적극지원)
+### 테스트 컨텍스트의 변경
+```
+@RunWith(SpringJUnit4ClassRunner.class)
+//@ContextConfiguration(locations = "/applicationContext.xml")
+@ContextConfiguration(classes = TestApplicationContext.class)
+public class UserDaoTest {
+```
+1. `@ContextConfiguration([classPath])`
+테스트에 사용될 테스트용 DI정보의 위치를 스프링 테스트에게 알려주는 애너테이션!
+
+2. `classes = [ConfigurationClass.class]`
+
+`@ConfigurationClass`가 붙은 자바 코드 설정파일을 사용하도록 설정가능 (3.1~)
+
+```
+@Configuration
+   @ImportResource("/applicationContext.xml")
+   public class TestApplicationContext {
+   
+   }
+```
+3. `@ImportResource("/applicationContext.xml")`
+xml의 설정을 자바 코드에서도 사용하도록 불러드리는 애너테이션
+
+### <context:annotation-config >제거
+`@PostConstruct`애너테이션을 실행하기 위해 추가했떤 네임스페이스는 
+자바 코드로 빈 설정을 하게된다면 해당 애너테이션은 생략 가능하다.
+`@Configuration`으로 빈 설정파일을 읽는 스프링 컨텍스트 종류는 자동으로 추가해주기 때문이다.
+
+4. 자바 코드로 변경한 스프링 컨텍스트 설정
+    - `@EnableTransactionManagement` : `<tx:annotation-driven/ >`과 같은 기능
+    - `@Configuration` : 스프링 빈 설정을 하겠다는 애너테이션, TestApplicationContext 역시 빈으로 등록된다.
+    - 
+```
+package springbook.config;
+@Configuration
+@EnableTransactionManagement
+public class TestApplicationContext {
+    @Bean
+    public DataSource dataSource() {
+        SimpleDriverDataSource dataSource = new SimpleDriverDataSource();
+        dataSource.setDriverClass(Driver.class);
+        dataSource
+            .setUrl("jdbc:mysql://127.0.0.1:3306/book?useSSL=false&serverTimezone=Asia/Seoul");
+        dataSource.setUsername("root");
+        dataSource.setPassword("1234");
+        return dataSource;
+    }
+    @Bean
+    public DataSource embeddedDatabase() {
+        return new EmbeddedDatabaseBuilder()
+            .setName("embeddedDatabase")
+            .setType(EmbeddedDatabaseType.HSQL)
+            .addScript("sqlmap/sqlmapSchema.sql")
+            .build();
+    }
+    @Bean
+    public PlatformTransactionManager transactionManager() {
+        DataSourceTransactionManager transactionManager = new DataSourceTransactionManager();
+        transactionManager.setDataSource(dataSource());
+        return transactionManager;
+    }
+    @Bean
+    public UserDao userDao() {
+        UserDaoJdbc userdao = new UserDaoJdbc();
+        userdao.setDataSource(dataSource());
+        userdao.setSqlService(sqlService());
+        return userdao;
+    }
+    @Bean
+    public UserService userService() {
+        UserServiceImpl userService = new UserServiceImpl();
+        userService.setUserDao(userDao());
+        userService.setMailSender(mailSender());
+        return userService;
+    }
+    @Bean
+    public UserService testUserService() {
+        TestUserService testUserService = new TestUserService();
+        testUserService.setMailSender(mailSender());
+        testUserService.setUserDao(userDao());
+        return testUserService;
+    }
+    @Bean
+    public MailSender mailSender() {
+        DummyMailSender sender = new DummyMailSender();
+        return sender;
+    }
+    @Bean
+    public SqlService sqlService() {
+        OxmSqlService sqlService = new OxmSqlService();
+        sqlService.setUnmarshaller(unmarshaller());
+        sqlService.setSqlRepository(sqlRegistry());
+        return sqlService;
+    }
+    @Bean
+    public SqlRegistry sqlRegistry() {
+        EmbeddedDbSqlRegistry registry = new EmbeddedDbSqlRegistry();
+        registry.setDataSource(embeddedDatabase());
+        return registry;
+    }
+    @Bean
+    public Unmarshaller unmarshaller() {
+        Jaxb2Marshaller marshaller = new Jaxb2Marshaller();
+        marshaller.setContextPath("springbook.user.sqlservice.jaxb");
+        return marshaller;
+    }
+}
+
+```

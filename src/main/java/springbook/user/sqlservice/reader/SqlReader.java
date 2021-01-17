@@ -1,9 +1,9 @@
 package springbook.user.sqlservice.reader;
 
-import springbook.user.sqlservice.repository.SqlSqlRegistry;
+import springbook.user.sqlservice.repository.SqlRegistry;
 
 public interface SqlReader {
 
-    void read(SqlSqlRegistry sqlRepository);
+    void read(SqlRegistry sqlRepository);
 
 }

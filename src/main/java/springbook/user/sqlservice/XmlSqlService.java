@@ -11,14 +11,14 @@ import springbook.user.exception.SqlRetrievalFailureException;
 import springbook.user.sqlservice.jaxb.SqlType;
 import springbook.user.sqlservice.jaxb.Sqlmap;
 import springbook.user.sqlservice.reader.SqlReader;
-import springbook.user.sqlservice.repository.SqlSqlRegistry;
+import springbook.user.sqlservice.repository.SqlRegistry;
 
-public class XmlSqlService implements SqlService, SqlSqlRegistry, SqlReader {
+public class XmlSqlService implements SqlService, SqlRegistry, SqlReader {
 
 
     private Map<String, String> sqlMap = new HashMap<String, String>();
     private String sqlmapFile;
-    private SqlSqlRegistry sqlRepository;
+    private SqlRegistry sqlRepository;
     private SqlReader sqlReader;
 
     public XmlSqlService() {
@@ -29,7 +29,7 @@ public class XmlSqlService implements SqlService, SqlSqlRegistry, SqlReader {
         this.sqlmapFile = sqlmapFile;
     }
 
-    public void setSqlRepository(SqlSqlRegistry sqlRepository) {
+    public void setSqlRepository(SqlRegistry sqlRepository) {
         this.sqlRepository = sqlRepository;
     }
 
@@ -69,7 +69,7 @@ public class XmlSqlService implements SqlService, SqlSqlRegistry, SqlReader {
 
     //SqlReader
     @Override
-    public void read(SqlSqlRegistry sqlRepository) {
+    public void read(SqlRegistry sqlRepository) {
         String contextPath = Sqlmap.class.getPackage().getName();
         try {
             JAXBContext context = JAXBContext.newInstance(contextPath);

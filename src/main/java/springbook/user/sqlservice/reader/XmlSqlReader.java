@@ -5,7 +5,7 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import springbook.user.sqlservice.jaxb.SqlType;
 import springbook.user.sqlservice.jaxb.Sqlmap;
-import springbook.user.sqlservice.repository.SqlSqlRegistry;
+import springbook.user.sqlservice.repository.SqlRegistry;
 
 public class XmlSqlReader implements SqlReader {
 
@@ -17,7 +17,7 @@ public class XmlSqlReader implements SqlReader {
     }
 
     @Override
-    public void read(SqlSqlRegistry sqlRepository) {
+    public void read(SqlRegistry sqlRepository) {
         String contextPath = Sqlmap.class.getPackage().getName();
         try {
             JAXBContext context = JAXBContext.newInstance(contextPath);

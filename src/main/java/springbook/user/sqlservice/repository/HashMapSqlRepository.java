@@ -5,7 +5,7 @@ import java.util.Map;
 import springbook.user.exception.SqlNotFountException;
 import springbook.user.exception.SqlRetrievalFailureException;
 
-public class HashMapSqlRepository implements SqlSqlRegistry {
+public class HashMapSqlRepository implements SqlRegistry {
 
     private Map<String, String> sqlMap = new HashMap<String, String>();
 

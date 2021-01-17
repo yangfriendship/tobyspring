@@ -23,7 +23,6 @@ import springbook.user.dao.UserDao;
 @ContextConfiguration(classes = TestApplicationContext.class)
 public class UserDaoTest {
 
-
     @Autowired
     private UserDao userDao;
     @Autowired
@@ -58,7 +57,6 @@ public class UserDaoTest {
         Assert.assertEquals(user1.getId(), find.getId());
         Assert.assertEquals(user1.getName(), find.getName());
         Assert.assertEquals(user1.getPassword(), find.getPassword());
-
     }
 
     @Test

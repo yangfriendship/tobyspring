@@ -33,13 +33,14 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
+import springbook.config.TestApplicationContext;
 import springbook.user.Level;
 import springbook.user.User;
 import springbook.user.dao.UserDao;
 import springbook.user.service.TestUserService.TestUserServiceException;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(locations = "/applicationContext.xml")
+@ContextConfiguration(classes = TestApplicationContext.class)
 public class UserServiceTest {
 
     @Autowired
@@ -212,15 +213,14 @@ public class UserServiceTest {
     public void transactionSync() {
         DefaultTransactionDefinition definition = new DefaultTransactionDefinition();
         TransactionStatus status = transactionManager.getTransaction(definition);
-        Assert.assertEquals(0,this.userDao.getCount());
+        Assert.assertEquals(0, this.userDao.getCount());
         userService.deleteAll();
         userService.add(users.get(0));
         userService.add(users.get(1));
-        Assert.assertEquals(2,this.userDao.getCount());
-
+        Assert.assertEquals(2, this.userDao.getCount());
 
         transactionManager.rollback(status);
-        Assert.assertEquals(0,this.userDao.getCount());
+        Assert.assertEquals(0, this.userDao.getCount());
     }
 
     private TestUserService getTestUserService() {
