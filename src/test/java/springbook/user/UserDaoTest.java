@@ -12,6 +12,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.support.SQLErrorCodeSQLExceptionTranslator;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import springbook.config.AppContext;
@@ -20,7 +21,8 @@ import springbook.user.dao.DaoFactory;
 import springbook.user.dao.UserDao;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(classes = {AppContext.class, TestAppConfig.class})
+@ContextConfiguration(classes = AppContext.class)
+@ActiveProfiles("test")
 public class UserDaoTest {
 
     @Autowired

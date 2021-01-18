@@ -282,4 +282,205 @@ childContext에는 `Printer`구현체가 빈으로 등록되어 있지 않지만
            Printer printer = childContext.getBean("printer", Printer.class);
            Assert.assertNotNull(printer);
            Assert.assertTrue(printer instanceof StringPrinter);
-       }```
+       }
+```
+
+## 1.1.4 웹 애플리케이션의 IoC 컨테이너 구성
+서버에서 스프링 컨텍스트를 사용하는 방법은 대략 3가지로 구분된다.
+
+### 1. 웹 어플리케이션 안에 `WepApplicationContext`를 두는 방법
+- 스프링을 사용한다면 보통 독립적으로 배치치가 가능한 `WAR`(웹모듈)형태의 어플리케이션을 배포
+- 대표 서블릿을 놓고 공통 선행 작업을 진행 후, 각 요청에 따라 `핸들러`라고 불리는 클래스를 호출하는 방식으로 개발한다.
+- 몇 개의 서블릿이 중앙집권식으로 모든 요청을 받아서 처리하는 방식을 `프론트 컨트롤 패턴`이라고 한다.
+- 스프링 웹 어플리케이션에 사용되는 서블릿의 개수는 많아야 `2~3개` 정도
+- 서블릿 안에 만들어지는 방법
+- 웹 어플리케이션 레벨에서 만들어지는 방법
+- 일반적으로 이 상위 `두가지 방법 모두를 사용하여` 어플리케이션 컨텍스트를 만든다.
+
+### 웹 애플리케이션의 컨렉스트 계층구조
+- 웹 어플리케이션 레벨에 등록된 컨테이너를 보통 `루트 웹 어플리케이션 컨텍스트`라고 부른다.
+- 서블릿 레벨에 등록되는 컨테이너들의 부모가 된다.
+- 전체 계층 구조상 제일 root단에 위치하는 컨텍스트
+- 웹 어플리케이션에는 하나 이상의 `프론트 컨트롤` 역할을 하는 서블릿이 등록될 수 있다.
+- 이 서블릿에도 독립적인 어플리케이션 컨텍스트가 만들어진다.
+- 굳이 서블릿을 2개 이상 등록할 필요가 없으므로, 일반적으로 스프링 애플리케이션 컨텍스트를 가지면서 `프론트 컨트롤러`역할을 하는 하나의 서블릿을 만들어 사용한다.
+- 스프링은 웹 어플리케이션 마다 하나씩 존재하는 서플릿 컨텍스트를 통해 루트 컨텍스트에 접근하는 방법을 제공
+- `ServletContext`는 웹 어플리케이션 마다 하나씩 만들어지며 `HttpSession`,`HttpServletRequest`를 통해서 간단히 `ServletContext`를 가져올 수 있다.
+- 서블릿 컨텍스트는 계층구조상 루트 컨텍스트 보다 밑에 있으므로, 설정된 빈 설정이 `무시`되거나 `참조`될 수 있다.
+- 또한, `AOP관련설정`은 영향을 미치지 않는다. 
+
+### 웹 플리케이션의 컨텍스트 구성 방법
+어플리케이션 컨텍스트를 구성하는 방법은 `3가지`로 볼 수 있다.
+1. 서블릿릿 컨텍스트와 루트 어플리케이션 컨텍스트 계층구조
+    - 사실상 제일 많이 사용되는 `국룰`같은 방법
+    - 웹 관련 기술들을 서블릿 컨텍스트에 둔다.
+    - 나머지는 `루트 웹 컨텍스트`에 등록
+    - `루트 웹 컨텍스트는` 모든 서블릿 레벨의 컨텍스트의 부모가 된다.
+2. 루트 어플리케이션 컨텍스트 `단일구조`
+    - 스프링 웹 기술을 사용하지 않고 `서드파티 웹 프레임워크`나 `서비스 엔진`만을 사용하는 경우
+    - 굳이 스프릥 서블릿(DispatcherServlet)을 둘 필요 없이, `루트 웹 컨텍스트`만 등록해준다.
+3. 서블릿 컨텍스트 `단일구조`
+    - 스프링 웹 기술만을 사용하는 경우, `루트 웹 컨텍스트`를 생략할 수 있다.
+    - 서블릿 안에 만들어지는 컨텍스트가 부모 컨텍스트를 갖지 않으므로 루트 컨텍스트가 된다.
+    
+### 루트 어플리케이션 컨텍스트 등록
+- 웹 어플리케이션에서 `루트 웹 컨텍스트`는 서블릿의 `이벤트리스너`를 이용해서 만든다.
+- `ServletContextListener`인터페이스의 구현체는 `DB연결`, `로깅`같은 서비스를 만드는데 유용하게 쓰인다.
+   어플리케이션의 시작될 때 루트 컨텍스트를 생성하고 초기화하고, 종료될 때 컨텍스트와 함께 종료되는 리스너를 만들 수 있다.
+- `ContextLoaderListener`라는 구현체를 이용한다.(스프링제공)
+
+- 컨텍스트 클래스 변경
+애노테이션을 이용한 설정을 사용하려면 <context-param>을 이용해서 파라미터를 꼭 넘겨 줘야한다.
+```
+  <!-- ContextLoaderListener의 디폴트 클래스는 XmlWebApplicationContext이지만 아래와 같이 변경 가능하다. -->
+  <context-param>
+    <param-name>contextClass</param-name>
+    <param-value>org.springframework.web.context.support.AnnotationConfigWebApplicationContext
+    </param-value>
+  </context-param>
+
+  <context-param>
+    <param-name>contextConfigurationLocation</param-name>
+    <param-value>
+      [위치]
+    </param-value>
+  </context-param>
+```
+
+### 서블릿 애플리케이션 컨텍스트 등록
+- `DispatcherServlet`을 이용하여 프론트 컨트롤 방식으로 웹 기능을 지원한다.
+- `Web.xml`에 등록하여 사용
+- `DispatcherServlet`은 서블릿이 초기화 될 때, 자신의 컨텍스트 생성, 초기화한다.
+- 동시에 루트 웹 어플리케이션을 찾아 자신의 부모 컨텍스트로 등록한다.
+
+
+## 1.2 IoC DI를 위한 빈 설정 메타정보 작성
+IoC 컨테이너의 기본적인 역할은 어플리케이션의 빈을 생성, 관리하는 것이다.
+`BeanDefinitionReader` 인터페이스를 구현한다면 어떠한 형식의 빈 설정도 읽어드릴 수 있다.
+`BeanDefinition`로 만들어진 오브젝트를 `BeanDefinitionReader`가 읽어드리는 것이다.
+
+## 1.2.1 빈 메타 정보
+### 빈 설정 메타정보 항목 (P.84 참고)
+요약 : 컨테이너에 빈의 메타정보가 등록될 때, 필수인 것은 `클래스 이름`과 `빈 이름` 또는 `빈 아이디`이다.
+
+## 1.2.2 빈 등록 방법
+스프링에서 자주 이용되는 빈 등록 방법(5가지)
+
+1. XML:<bean> 태그
+ 
+2. XML:네임스페이스와 전용 태그
+빈의 속성을 분류하기 위해서 스프링에서는 네임스페이스와 전용 태그를 제공한다.
+1권에서 AOP를 틍록할 때 사용했던 `<AOP:Config >` 등이 이러한 기능이다.
+    - 의도를 파악하기 좋다.
+    - 애트리뷰티의 타입과 필수 사용 여부 등을 검증하기가 쉽다.
+    - 여러 가지 설정을 한 번에 할 수 있다. ex)`<context:annotation-config >`는 다섯 가지 빈 설정이 선언되어있다.
+3. 자동인식을 이용한 빈 등록(@Component,@ComponentScan)
+    - 특정 애너네이션이 붙은 빈을 등록된 패키지을 `빈 스캐닝`하여 자동으로 빈으로 등록해주는 기능, 스캐닝을 책임지는 오브젝트를 `빈 스캐너`라고 한다.
+    - `@Component`를 포함해 디폴트 필터에 적용되는 애노테이션을 `스테레오타입 애노테이션`이라고 한다.
+    - `@Component`으로 등록된 빈의 이름은 자동으로 `본래이름 -> 카멜케이스`로 변경해서 등록한다. 
+    - `@Component(${지정이름})`으로 직접 빈의 이름을 지정해줄 수 있다.
+    - `AnnotationConfigApplicationContext`는 빈 스캐너를 내장하고 있다. 즉,<context:component-scan base-package="" />을 기본 포함하는 것이다.
+    1. 테스트 코드 작성 
+    ```
+        @Test
+        public void annotationConfigApplicationContext(){
+            AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(
+                "springbook/learningtest");
+    
+            AnnotationHello hello = context.getBean("annotationHello", AnnotationHello.class);
+            Assert.assertNotNull(hello);
+        }
+    ```
+    2. `@Component`를 이용한 빈 등록
+    ```
+    @Component
+    public class AnnotationHello extends Hello {
+    }
+    ```
+    - 개발 생산성에 있어서는 애노테이션을 이용한 빈 등록이 좋다.
+    - 세밀한 빈 관리,설정이 필요하다면 Xml을 이용한 빈 등록을 사용하는 것이 좋다!
+4. Xml을 이용한 빈 스캐너 등록
+    - `<context:component-scan base-package="${패키지}" />`을 통해서 빈 스캐너를 선언할 수 있다.
+    - 설정된 패키지에 `@Component`가 붙은 클래스를 빈으로 자동 등록해준다.
+
+5. 빈 스캐너를 저장한 어플리케이션 컨텍스트 사용
+    - `AnnotationConfigWebApplicationContext` 역시 빈 스캐너를 내장하고 있다.
+    - `<ContextParam >` 컨텍스트 파라미터로 `ContextConfigLocation`의 값을 설정할 수 있다.
+
+### 자바 코드에 의한 빈 등록: @Configuration 클래스의 @Bean 메소드
+- `@Configuration` 애너테이션을 이용해서 만든다.
+```
+@Configuration
+public class AnnotationHelloConfig {
+    @Bean
+    public AnnotationHello annotationHello() {
+        return new AnnotationHello();
+    }
+```
+- 빈 설정 정보를 담은 자바 클래스 역시 빈으로 등록된다.
+- Xml파일에서도 `@Configuration`에 등록된 빈을 사용할 수 있다.
+아래와 같이 컴포넌트 스캔을 설정해준다면 검색할 수 있다.
+```
+  <context:component-scan base-package="springbook.learningtest" />
+
+```
+- 자바 코드로 등록된 빈들은 별도의 설정이 없다면 `싱글톤`으로 만들어진다.
+    - `new`를 사용해 매번 새로운 인스턴스를 생성하여 반환하는 것처럼 보이지만 내부적으로 이미 생성되어 있는 빈을 반환하는 것이다.
+    - `getBean()` 메서드로 빈을 받아와도 별도의 설정을 하지 않았다면 `싱글톤`이기 때문에 항상 같은 빈을 반환한다.
+    - hello와 hello2는 동일한 printer의 구현체를 주입 받는다.
+        ```
+      @Configuration
+      public class HelloConfig {
+          @Bean
+          public Hello hello(){
+              Hello hello = new Hello();
+              hello.setName("hello");
+              hello.setPrinter(printer());
+              return hello;
+          }
+          @Bean
+          public Hello hello2(){
+              Hello hello = new Hello();
+              hello.setName("hello2");
+              hello.setPrinter(printer());
+              return hello;
+          }
+          @Bean
+          public Printer printer() {
+              return new StringPrinter();
+          }
+      ```
+    - `printer()` 메서드가 총 2번 호출된 것 처럼 보이지만, 모두 같은 printer의 구현체를 주입받는다.
+        ```
+      @Test
+          public void helloConfigSingleTonTest(){
+              ApplicationContext context = new AnnotationConfigApplicationContext(
+                  HelloConfig.class);
+              Hello hello = context.getBean("hello", Hello.class);
+              Hello hello2 = context.getBean("hello2", Hello.class);
+      
+              Assert.assertNotSame(hello,hello2);
+              Assert.assertSame(hello.getPrinter(),hello2.getPrinter());
+          }
+      ```
+    - 자바 코드로 빈 정보를 설정한다면 컴파일러와 IDE의 적극적인 도움을 받을 수 있다.
+
+### 자바 코드에 의한 빈 등록: 일반 빈 클래스의 @Bean 메소드  
+- 일반 POJO 클래스에도 `@Bean`애너테이션을 이용하여 빈 등록을 할 수 있다.(@Configuration이 없는) 
+- POJO 클래스로만 빈을 등록했다면 `싱글톤을 보장해줄 수 없다.`
+- 유연성이 떨어지는 단점이 있다.
+- 수정을 위해 직접 빈 클래스를 수정해야한다는 단점이 있다.
+
+### 빈 등록 메타정보 구성 전략
+- XML 단독 사용
+    - 모든 빈 설정을 XML을 이용해서 설정
+    - 스프링에서 지원해주는 `네임스페이스`와 `전용태그`를 적극 사용할 수 있다.
+    - 특화된 스키마와 전용태그를 만든다면 XML 설정의 양을 대폭 줄일 수 있다.
+- XML과 빈 스캐닝의 혼용
+    - 등록하기 번거러운 AOP, 내장형DB, OXM마샬러 등 전용 스키마와 전용태그로 만든다.
+    - 나머지 부분은 빈 스캐너의 도움을 받아 빈으로 등록
+    - 빈 스캐닝과 XML을 이용한 빈 등록 각각의 장점만을 이용하여 개발한다.
+- XML 없이 빈 스캐닝 단독 사용
+    - @Configuration이 붙은 자바 설정 클래스를 생성한다.
+    - 루트 컨텍스트와 서블릿 컨텍스트의 contextClass를 `AnnotationConfigWebApplicationContext`로 변경해준다.
+    - `AnnotationConfigWebApplicationContext`는 내부적으로 `ComponentScan` 기능을 갖고 있기 때문에 `contextLocations`를 통해서 스캔대상 패키지를 설정해야한다.

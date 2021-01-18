@@ -7,6 +7,7 @@ import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.context.support.GenericXmlApplicationContext;
 import org.springframework.context.support.StaticApplicationContext;
@@ -21,6 +22,44 @@ public class HelloBeanTest {
     public void setUp() {
         this.context = new StaticApplicationContext();
         this.genericContext = new GenericApplicationContext();
+    }
+
+    @Test
+    public void helloConfigSingleTonTest(){
+        ApplicationContext context = new AnnotationConfigApplicationContext(
+            HelloConfig.class);
+        Hello hello = context.getBean("hello", Hello.class);
+        Hello hello2 = context.getBean("hello2", Hello.class);
+
+        Assert.assertNotSame(hello,hello2);
+        Assert.assertSame(hello.getPrinter(),hello2.getPrinter());
+    }
+
+    @Test
+    public void javaCodeConfigurationWithXmlContextTest(){
+
+        GenericXmlApplicationContext context = new GenericXmlApplicationContext(
+            "/vol2/helloAppContext.xml");
+
+        AnnotationHello hello = context.getBean("annotationHello", AnnotationHello.class);
+
+        Assert.assertNotNull(hello);
+    }
+
+    @Test
+    public void javaCodeConfigurationTest(){
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(AnnotationHelloConfig.class);
+        Hello hello = context.getBean("annotationHello", Hello.class);
+        Assert.assertNotNull(hello);
+    }
+
+    @Test
+    public void annotationConfigApplicationContext(){
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(
+            "springbook/learningtest");
+
+        AnnotationHello hello = context.getBean("annotationHello", AnnotationHello.class);
+        Assert.assertNotNull(hello);
     }
 
     @Test
@@ -147,5 +186,6 @@ public class HelloBeanTest {
         Assert.assertNotNull(printer);
         Assert.assertTrue(printer instanceof StringPrinter);
     }
+
 
 }
