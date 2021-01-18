@@ -9,17 +9,21 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
+import springbook.config.annotation.EnableSqlService;
 
 @Configuration
 @ComponentScan(basePackages = "springbook.user")
 @EnableTransactionManagement
-@Import({SqlServiceContext.class, TestAppConfig.class, ProductionAppContext.class})
+@Import({TestAppConfig.class, ProductionAppContext.class})
 @PropertySource("/database.properties")
-public class AppContext {
+@EnableSqlService
+public class AppContext implements SqlMapConfig {
 
     @Value("${db.url}")
     private String url;
@@ -31,7 +35,7 @@ public class AppContext {
     private String password;
 
     @Bean
-    public static PropertySourcesPlaceholderConfigurer placeholderConfigurer(){
+    public static PropertySourcesPlaceholderConfigurer placeholderConfigurer() {
         return new PropertySourcesPlaceholderConfigurer();
     }
 
@@ -54,4 +58,9 @@ public class AppContext {
     }
 
 
+    @Override
+    public Resource getSqlMapResource() {
+        System.out.println("okok");
+        return new ClassPathResource("sqlmap/sqlmap.xml");
+    }
 }

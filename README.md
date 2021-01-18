@@ -3788,3 +3788,87 @@ public class AppContext {
         return dataSource;
     }
 ```
+## 7.6.6 빈 설정의 재사용과 @Enable*
+
+### 빈설정자
+`sqlmap.xml` 설저 파일의 위치 역시 인터페이스를 이용해서 분리할 수 있다.
+1. `SqlMapConfig` 인터페이스 생성, `UserSqlMapConfig` 구현
+```
+import org.springframework.core.io.Resource;
+
+public interface SqlMapConfig {
+
+    Resource getSqlMapResource();
+
+}
+```
+```
+public class UserSqlMapConfig implements SqlMapConfig {
+
+    @Override
+    public Resource getSqlMapResource() {
+        return new ClassPathResource("sqlmap/sqlmap.xml");
+    }
+}
+```
+2. AppContext에 Bean으로 등록, DI를 필요로 하는 SqlServiceContext에 `AutoWired`
+// 빈 등록 생략
+```
+@Configuration
+@ComponentScan("springbook")
+public class SqlServiceContext {
+
+    @Autowired
+    private SqlMapConfig sqlMapConfig;
+
+    @Bean
+    public SqlService sqlService() {
+        OxmSqlService sqlService = new OxmSqlService();
+        sqlService.setUnmarshaller(unmarshaller());
+        sqlService.setSqlRepository(sqlRegistry());
+        sqlService.setSqlmapFile(this.sqlMapConfig.getSqlMapResource());
+        return sqlService;
+    }
+    // 생략...
+}
+```
+3. AppContext가 직접 `UserSqlMapContext`를 구현해도 빈으로 등록할 수 있다.
+`SqlMapConfig` 구현해도 같은 기능으로 동작한다.
+```
+@Configuration
+@ComponentScan(basePackages = "springbook.user")
+@EnableTransactionManagement
+@Import({SqlServiceContext.class, TestAppConfig.class, ProductionAppContext.class})
+@PropertySource("/database.properties")
+public class AppContext implements SqlMapConfig {
+
+    @Override
+    public Resource getSqlMapResource() {
+        System.out.println("okok");
+        return new ClassPathResource("sqlmap/sqlmap.xml");
+    }
+```
+### @Enable* 애노테이션
+애너테이션을 이용한 설정 클래스 임포트
+1. SqlServiceContext를 임포트하는 애너테이션을 만든다.
+```
+import org.springframework.context.annotation.Import;
+import springbook.config.SqlServiceContext;
+
+@Import(value = SqlServiceContext.class)
+public @interface EnableSqlService {
+
+}
+```
+2. AppContext 수정
+    - `@Import`에서 기존의 `SqlServiceContext`를 삭제
+    - `@EnableSqlService`애너테이션을 추가함으로써, `SqlServiceContext`를 임포트 설정한다.
+```
+@Configuration
+@ComponentScan(basePackages = "springbook.user")
+@EnableTransactionManagement
+@Import({TestAppConfig.class, ProductionAppContext.class})
+@PropertySource("/database.properties")
+@EnableSqlService
+public class AppContext implements SqlMapConfig {
+```
