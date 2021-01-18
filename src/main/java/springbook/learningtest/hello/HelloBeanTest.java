@@ -91,7 +91,7 @@ public class HelloBeanTest {
     public void genericApplicationContextTest() {
 
         XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(this.genericContext);
-        reader.loadBeanDefinitions("/helloAppContext.xml");
+        reader.loadBeanDefinitions("/vol2/helloAppContext.xml");
         this.genericContext.refresh();
 
         Hello hello = this.genericContext.getBean("hello", Hello.class);
@@ -102,12 +102,50 @@ public class HelloBeanTest {
     @Test
     public void genericXmlApplicationContext() {
         ApplicationContext context = new GenericXmlApplicationContext(
-            "/helloAppContext.xml");
+            "/vol2/helloAppContext.xml");
         Hello hello = context.getBean("hello", Hello.class);
         Assert.assertNotNull(hello);
         Assert.assertEquals("Hello youzheng", hello.sayHello());
 
         new XmlWebApplicationContext();
+    }
+
+    @Test
+    public void childAndParentContextTest(){
+
+        GenericXmlApplicationContext parentContext = new GenericXmlApplicationContext(
+            "/vol2/parentContext.xml");
+
+        GenericApplicationContext childContext = new GenericApplicationContext(
+            parentContext);
+
+        XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(childContext);
+        int result = reader.loadBeanDefinitions("vol2/childContext.xml");
+        childContext.refresh();
+
+        Hello parentHello = parentContext.getBean("hello", Hello.class);
+        Hello childHello = childContext.getBean("hello", Hello.class);
+        Assert.assertNotNull(childHello);
+        Assert.assertEquals("Hello child",childHello.sayHello());
+        Assert.assertEquals("Hello parent",parentHello.sayHello());
+    }
+
+    @Test
+    public void childAndParentContextTest2(){
+
+        GenericXmlApplicationContext parentContext = new GenericXmlApplicationContext(
+            "/vol2/parentContext.xml");
+
+        GenericApplicationContext childContext = new GenericApplicationContext(
+            parentContext);
+
+        XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(childContext);
+        int result = reader.loadBeanDefinitions("vol2/childContext.xml");
+        childContext.refresh();
+
+        Printer printer = childContext.getBean("printer", Printer.class);
+        Assert.assertNotNull(printer);
+        Assert.assertTrue(printer instanceof StringPrinter);
     }
 
 }

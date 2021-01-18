@@ -216,5 +216,70 @@ public class HelloBeanTest {
     - 웹 어플리케이션에서의 작동 방식은 `main()`메서드 역할을 하는 서블릿을 먼저 만들고, 애플리케이션 컨텍스트를 미리 활성화 시킨 후, 필요한 요청에 따라 빈을 반환하는 식이다.
     - 스프링은 이러한 클러이언트의 요청에 적절한 Bean을 찾아주는 `DispatcherServlet`이라는 서블릿을 제공한다.
     - 서블릿을 `web.xml`을 등록하여 사용한다.
-    
- 
+
+## 1.1.3 IoC 컨테이너 계층구조
+한 개 이상의 Ioc컨테이너를 만들 때는, 계층구조를 이용하여 만들 수 있다.
+
+### 부모 컨텍스트를 이용한 계층구조 효과
+- 계층 구조 형태에서는 각자의 빈을 스스로 관리한다.
+- 자식에게 필요한 빈이 등록되지 않았다면 부모 컨텍스로 올라가 필요한 빈을 검색한다.
+- 하지만, 부모 컨텍스트에 빈이 없다면, 부모의 부모 컨텍스트에 빈 검색을 한다.
+- 부모 컨텍스트에 빈이 없다고 자식 컨텍스트에 빈 검색을 할 수는 없다.
+- 빈 검색 순위
+    1. 자신
+    2. 직계 부모 순서
+    3. 자식 -> 직계부모 (O), 부모 -> 자식(X) 
+- 중복되는 빈이 있다면 자식 컨텍스트의 설정이 부모 컨텍스트의 설정을 `오버라이딩`한다.    
+### 컨텍스트 계층구조 테스트
+1. xml설정
+childContext.xml
+`Printer`인터페이스의 구현체가 빈으로 등록되어 있지 않다. 부모 컨텍스트에 빈 탐색을 요청해야한다.
+IDE가 `ref=printer`라는 빈이 없다고 붉은색 글씨로 경고하지만 런타임 시에, 부모 컨텍스트를 탐색해서
+의존 객체를 다이나믹하게 주입해준다.
+```
+  <bean id="hello" class="springbook.learningtest.hello.Hello">
+    <property name="name" value="child"/>
+    <property name="printer" ref="printer"/>
+  </bean>
+```
+parentContext.xml
+`Printer`인터페이스의 구현체가 빈으로 등록되어 있다.
+```
+
+  <bean id="hello" class="springbook.learningtest.hello.Hello">
+    <property name="name" value="parent"/>
+    <property name="printer" ref="printer"/>
+  </bean>
+
+  <bean id="printer" class="springbook.learningtest.hello.StringPrinter"/>
+
+```
+2. 테스트 코드
+```
+    @Test
+    public void childAndParentContextTest(){
+        GenericXmlApplicationContext parentContext = new GenericXmlApplicationContext(
+            "/vol2/parentContext.xml");
+        GenericApplicationContext childContext = new GenericApplicationContext(
+            parentContext);
+
+        XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(childContext);
+        int result = reader.loadBeanDefinitions("vol2/childContext.xml");
+        childContext.refresh();
+
+        Hello parentHello = parentContext.getBean("hello", Hello.class);
+        Hello childHello = childContext.getBean("hello", Hello.class);
+        Assert.assertNotNull(childHello);
+        Assert.assertEquals("Hello child",childHello.sayHello());
+        Assert.assertEquals("Hello parent",parentHello.sayHello());
+    }
+```
+3. DI뿐만 아니라 DL도 가능하다.
+childContext에는 `Printer`구현체가 빈으로 등록되어 있지 않지만, 호출할 시 부모 컨텍스트의 빈을 찾아서 반환한다.
+```@Test
+       public void childAndParentContextTest2(){
+            // 컨텍스트 상속 생략...
+           Printer printer = childContext.getBean("printer", Printer.class);
+           Assert.assertNotNull(printer);
+           Assert.assertTrue(printer instanceof StringPrinter);
+       }```
