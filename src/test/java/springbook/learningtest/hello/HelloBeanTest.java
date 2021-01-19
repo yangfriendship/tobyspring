@@ -40,6 +40,16 @@ public class HelloBeanTest {
     }
 
     @Test
+    public void initMehtodTest(){
+        GenericXmlApplicationContext context = new GenericXmlApplicationContext(
+            "/vol2/helloAppContext.xml");
+
+        ServiceRequest request = context.getBean("serviceRequest", ServiceRequest.class);
+        Assert.assertNotNull(request);
+        Assert.assertEquals("youzheng",request.getName());
+    }
+
+    @Test
     public void providerTest(){
         ServiceRequest serviceRequest = serviceRequestProvider.get();
         ServiceRequest serviceRequest2 = serviceRequestProvider.get();

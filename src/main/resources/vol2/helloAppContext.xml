@@ -12,7 +12,7 @@
     <property name="printer" ref="printer"/>
   </bean>
 
-  <bean id="printer" class="springbook.learningtest.hello.StringPrinter" />
+  <bean id="printer" class="springbook.learningtest.hello.StringPrinter"/>
 
   <bean id="requestFactory"
     class="org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean">
@@ -20,7 +20,11 @@
   </bean>
 
   <bean class="org.springframework.beans.factory.config.ServiceLocatorFactoryBean">
-    <property name="serviceLocatorInterface" value="springbook.learningtest.hello.ServiceRequestFactory"/>
+    <property name="serviceLocatorInterface"
+      value="springbook.learningtest.hello.ServiceRequestFactory"/>
   </bean>
+
+  <bean id="serviceRequest" class="springbook.learningtest.hello.ServiceRequest"
+    init-method="init"/>
 
 </beans>

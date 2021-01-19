@@ -828,3 +828,52 @@ DI 이후에는 DI를 받은 `클라이언트 오브젝트`에서 제공받은 `
     - @Named("myUserService")  
 - 자바 코드에서 name 설정하는 방법은 아래와 같다
     - @Bean(name="myUserDao")
+
+## 1.4.2 빈 생명주기 메서드
+초기화 메서드 :빈 오브젝트가 생성되고 DI까지 마친 후에 실행되는 메서드 <br />
+오브젝트의 기본적인 초기화 작업은 생성자가 담당하지만, DI후에 해야하는 작업도 있다. 이럴때 초기화 메서드를 이용한다.
+
+1. 초기화 콜백 인터페이스
+    - `InitializingBean` 인터페이스를 구현한 빈을 작성하는 방법
+    - `afterPropertiesSet()`메서드를 이용해 초기화 작업을 한다.
+    - 프로퍼티 작업을 마친 후, 실행된다.
+    - 클래스에 스프링 인터페이스를 노출시키기 때문에 `권장하지 않는다`
+2. init-method
+    - `@Bean`애노테이션을 이용한 빈이라면 `@Bean(init-method="init")`이렇게 등록한다.
+    - 빈이 생성되고 DI된 후에 실행될 메서드를 직접 지정해준다.
+        ```
+      @Component
+      @Scope("prototype")
+      public class ServiceRequest {
+      
+          private String name;
+          public void init() {
+              this.name = "youzheng";
+          }
+      }
+      ```
+    -  <bean id="serviceRequest" class="springbook.learningtest.hello.ServiceRequest"
+          init-method="init"/> 이처럼 설정한다.
+3. 테스트
+    ```
+        @Test
+        public void initMehtodTest(){
+            GenericXmlApplicationContext context = new GenericXmlApplicationContext(
+                "/vol2/helloAppContext.xml");
+            ServiceRequest request = context.getBean("serviceRequest", ServiceRequest.class);
+            Assert.assertNotNull(request);
+            Assert.assertEquals("youzheng",request.getName());
+        }
+   ```
+4. @PostConstruct
+    - `@PostConstruct`는 자바 표준 애노테이션 (Spring에 종속되는 기능이 아님)
+    - `init-method`보다 직관적이다.
+    - `제일 권장하는 방식`
+    
+### 제거 메서드
+컨테이너가 종료될 때 리소스를 반환하거나 처리해야할 작업이 있을 때 사용된다.
+1. 제거 콜백 인터페이스 : `DisposableBean`를 구현
+2. `destroy-method` : Xml으로 빈 등록시 <bean id=${id}...destroy-method=${methodName} >
+3. `@PreDestroy` : 클래스에 있는 제거용 메서드에 추가하는 방식
+4. @Bean(destroyMethod=${methodName})
+
