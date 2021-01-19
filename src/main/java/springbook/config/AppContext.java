@@ -34,6 +34,7 @@ public class AppContext implements SqlMapConfig {
     @Value("${db.password}")
     private String password;
 
+
     @Bean
     public static PropertySourcesPlaceholderConfigurer placeholderConfigurer() {
         return new PropertySourcesPlaceholderConfigurer();

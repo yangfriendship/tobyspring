@@ -1,8 +1,13 @@
 package springbook.learningtest.hello;
 
+import java.util.Properties;
+import javax.inject.Inject;
+import javax.inject.Provider;
 import junit.framework.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
@@ -11,17 +16,58 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.context.support.GenericXmlApplicationContext;
 import org.springframework.context.support.StaticApplicationContext;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.web.context.support.XmlWebApplicationContext;
 
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(locations = "/vol2/helloAppContext.xml")
 public class HelloBeanTest {
 
     private StaticApplicationContext context;
     private GenericApplicationContext genericContext;
 
+    @Autowired
+    private ServiceRequestFactory serviceRequestFactory;
+    @Inject
+    private Provider<ServiceRequest> serviceRequestProvider;
+
+
     @Before
     public void setUp() {
         this.context = new StaticApplicationContext();
         this.genericContext = new GenericApplicationContext();
+    }
+
+    @Test
+    public void providerTest(){
+        ServiceRequest serviceRequest = serviceRequestProvider.get();
+        ServiceRequest serviceRequest2 = serviceRequestProvider.get();
+
+        Assert.assertNotNull(serviceRequest);
+        Assert.assertNotNull(serviceRequest2);
+        Assert.assertNotSame(serviceRequest,serviceRequest2);
+    }
+
+    @Test
+    public void serviceRequestFactoryTest(){
+        ServiceRequest serviceRequest = serviceRequestFactory.getServiceRequest();
+        ServiceRequest serviceRequest2 = serviceRequestFactory.getServiceRequest();
+
+        Assert.assertNotNull(serviceRequest);
+        Assert.assertNotNull(serviceRequest2);
+        Assert.assertNotSame(serviceRequest,serviceRequest2);
+    }
+
+    @Test
+    public void systemPropertiesTest(){
+        ApplicationContext context = new AnnotationConfigApplicationContext(
+            HelloConfig.class);
+        Properties properties = context.getBean("systemProperties", Properties.class);
+        for(String prop : properties.stringPropertyNames()){
+            System.out.println(prop.toString() + " : " + properties.get(prop));
+        }
+        Assert.assertNotNull(properties);
     }
 
     @Test

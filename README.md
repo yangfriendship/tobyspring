@@ -484,3 +484,299 @@ public class AnnotationHelloConfig {
     - @Configuration이 붙은 자바 설정 클래스를 생성한다.
     - 루트 컨텍스트와 서블릿 컨텍스트의 contextClass를 `AnnotationConfigWebApplicationContext`로 변경해준다.
     - `AnnotationConfigWebApplicationContext`는 내부적으로 `ComponentScan` 기능을 갖고 있기 때문에 `contextLocations`를 통해서 스캔대상 패키지를 설정해야한다.
+
+## 1.2.3 빈 의존관계 설정 방법
+
+1. XML: <property>,<constructor-arg>
+- <property> setter 주입 방식 
+빈으로 등록될 클래스에 `setXXXX` 메서드가 꼭 정의되어 있어야한다. <br >
+`ref=`를 이용하여 등록된 빈을 참조할 수 있다. <br >
+`value=`를 이용하여 String,int,char 등 뿐만 아니라 `class` 역시 자동 타입 변환하여 넣어준다.
+- <constructor-arg>
+빈으로 등록될 클래스에 정의된 생성자를 기준으로 의존객체를 주입한다. <br >
+Lombok을 이용하면 불편함을 많이 줄일 수 있다. <br >
+`<constructor-arg type=${classLocation}>`을 통해서 타입을 기준으로 의존성 주입이 가능하다. <br >
+중복되는 파라미터가 있다면 `<constructor-arg index=${order}>`로 파라미터의 순서를 설정할 수 있다. <br >
+`<constructor-arg name=${parameterName}>` 파라미터의 이름을 기준으로도 가능하다. <br >
+
+2. XML 자동 와이어링
+
+## 1.2.4 프로퍼티 값설정 방법
+DI를 통해서 주입되는 것은 두 가지다. 하나는 다른 빈 오브젝트의 `레퍼런스`이고, 다른 하나는 단순한 `값`(value)이다. <br >
+싱글톤은 동시성 문제 때문에 필드 값을 함부로 수정하지 않는다. 보통 상태가 없는 `읽기전용`으로 만든다. <br >
+
+### 메타정보 종류에 따른 값 설정 방법
+- XML: <property>와 전용 태그
+
+- 애노테이션 : `@Value`
+    - 빈이 사용해야할 값을 코드에 담지 않고 설정을 통해 런타임시에 주입해야할 때 사용하는 방법
+    - 환경이 달라질 수 있는 경우 (ex.DataSource)
+    - 테스트나 특별한 이벤트 때, 초기값 대신 다른 값을 사용하고 싶은 경우
+    - `@Value`는 스프링이 넣어주는 것이기 때문에 컨테이너 밖에서 사용한다면 값이 등록되지 않는다.
+- 자바 코드: `@Value`
+    - 외부 리소스를 참고할 때, 사용 가능하다. 
+    ```
+  @Value("${database.url}")
+  ```
+    - 파라미터에 바로 사용 가능하다.
+    ```
+  public void method(@Value("${database.url}")String url ){
+  ...
+  }
+  ```
+### PropertyEditor와 ConversionService
+PropertyEditor : `@Value`를 통해서 값을 전달할 때, 자동을 값을 변환해주는 기능, 자바가 지원해주는 기본기능
+ConversionService : 스프링이 지원해주는 타입변환 기능
+    - 따로 빈으로 등록해줘야 한다.
+    - org.springframework.context.support.ConversionServiceFactoryBean
+    - `PropertyEditor`를 대신해서 기능을 제공
+    
+### 컬렉션
+컬렉션의 값을 XMl을 이용해서 작성할 수 있다.
+- List, Set
+    - `<list>`,`<set>`
+    - `<value>`를 사용해서 값을 설정
+
+- Map
+    - `<map>`
+    - `<entry key=${keyName} value=${value}>`
+
+- Properties
+```
+<properties name=${name} >
+    <props>
+        <prop key=${key}>${value}></ props>
+        <prop key=${key}>${value}></ props>
+    </props>
+</properties>
+```
+- 컬렉션에는 `<value>`로 값을 넣을 뿐만 아니라 `ref bean=${beanName}`을 통해 정의된 빈을 넣을 수도 있다.
+
+### <util:list >, <util:set >
+util스키마의 전용태그를 이용하면 아래와 같이 컬렉션도 빈으로 등록하여 사용할 수 있다.
+- `<util:list>`
+`<util:list id=${name} list-class="java.util.ArrayList" ">`
+- `<util:set>`
+`<util:set id=${name} set-class="java.util.##set" ">`
+- `<util:map>`
+`<util:map id=${name} map-class="java.util.##map" ">`
+- <util:properties>
+location으로 외부 설정 파일을 가져와서 사용할 수 있따.
+`<util:properties id=${name} location="classpath:xxxx"">`
+
+### Null과 빈문자열
+- Null을 주입할 때는 `<null />`을 사용한다.
+- 빈 문자열을 입력할 땐, ""을 넣어주면 된다.
+
+### 프로퍼티 파일을 이용한 값 설정
+외부설정은 프로퍼티 파일을 이용해서 외부로 분리하자 이것이 객체지향적이기도 하고 변경과 수정에 쉽게 대응할 수 있기 때문이다. <br />
+프로퍼티는 xml과 비교해 복잡한 구성이 필요 없고, key와 value만으로 이루어져 있기 때문에 손쉽게 이용할 수 있다 <br />
+프로퍼티가 변경될 경우에 따로 코드를 변경해 재 컴파일할 필요도 없다. <br/ >
+
+- `PropertyPlaceHolderConfigurer`를 이용한 수동 변환
+    - `PropertyPlaceHolderConfigurer`를 빈으로 등록해준다.
+    - 치환자 `${peroperty.ke}`를 이용해서 값을 매칭시킨다.
+    - `@Value`를 사용해서 값을 불러올 수도 있다.
+```
+  @Bean
+  public static PropertySourcesPlaceholderConfigurer placeholderConfigurer() {
+      return new PropertySourcesPlaceholderConfigurer();
+  }
+```
+```
+  <context:property-placeholder location="classpath:database.properties"/>
+```
+- 능동변환: `SpEL`
+스프링 전용 표현식 언어. SpEL를 사용하면 손쉽게 다른 빈 오브젝트나 프로퍼티에 접근할 수 있다. `#{}`의 표현식을 이용해서 사용한다.
+
+## 1.2.5 컨테이너가 자동등록하는 빈
+스프링 컨테이너가 초기화 과정에서 자동으로 등록되는 빈, 직접 사용하는 일은 없지만 기억해두면 좋다!
+```
+public interface ApplicationContext extends 
+    EnvironmentCapable, 
+    ListableBeanFactory, 
+    HierarchicalBeanFactory,
+    MessageSource, 
+    ApplicationEventPublisher, 
+    ResourcePatternResolver {
+}
+```
+### ApplicationContext, BeanFactory
+1. ApplicationContext의 구현체
+2. BeanFactory
+    - ApplicationContext는 BeanFactory의 서브인터페이스
+    - 직접 생성하기 보다는 ApplicationContext 내부에 정의된 `DefaultListableBeanFactory`를 사용
+### ResourceLoader, ApplicationEventPublisher
+1. ResourceLoader
+    - 서버 환경에 따라서 리소스를 로딩할 수 있는 기능
+    - 서블릿 컨텍스트의 리소스를 사용할 때, `ResourceLoader` 타입으로 DI를 받으면 된다.
+2.  ApplicationEventPublisher
+    - 자주 사용되지 않는다.
+### systemProperties, systemEnvironment
+스프링 컨테이너가 직접 등록하는 빈 중에서 타입이 아니라 이름을 통해 접근하는 빈
+- JVM이 생성하는 시스템 프로퍼티 값을 읽을 수 있다.
+- `@Resource`로 오토 와이어링하는 것이 바람직하다. 
+```
+@Configuration
+public class HelloConfig {
+    @Resource
+    private Properties systemProperties;
+```
+```
+    @Test
+    public void systemPropertiesTest(){
+        ApplicationContext context = new AnnotationConfigApplicationContext(
+            HelloConfig.class);
+        Properties properties = context.getBean("systemProperties", Properties.class);
+        for(String prop : properties.stringPropertyNames()){
+            System.out.println(prop.toString() + " : " + properties.get(prop));
+        }
+        Assert.assertNotNull(properties);
+    }
+```
+
+## 1.3 프로토타입과 스코프
+스프링이 관리하는 빈은 보통 `싱글톤` 오브젝트로 생성된다. 멀티스레드 환경에서 여러 요청에 사용되는 싱글톤 빈은 `상태값`을 갖으면 안된다.
+가끔은 싱글톤 대신 하나의 빈을 여러개 만들어야 할 때가 있는데 그때 `프로토타입`으로 생성하면 된다! <br />
+싱글톤이 아닌 빈은 두 가지로 나뉜다.
+스코프 : 스프링 컨테이너가 관리하는 빈 오브젝트의 생명 주기를 나타낸다. 싱글톤 스코프의 경우에는 컨테이너의 생성과 동시에 생성돼 종료할 때 같이 
+소멸되므로 스프링컨테이너와 생명주기가 같다.그래서 컨테이너 스코프라고도 한다.
+1. 프로토타입
+2. 스코프 빈
+
+### 1.3.1 프로토타입 스코프
+프로토타입으로 설정된 빈은 컨테이너에 DI/DL을 요청하면 매번 새로운 빈을 만들어 반환한다. <br />
+1. HelloConfig 설정 클래스에 `@Scope("prototype")`를 추가한다.
+```
+    @Bean
+    @Scope("prototype")
+    public Printer printer() {
+        return new StringPrinter();
+    }
+```
+2. 싱글톤 테스트
+예전에 작성했던 싱글톤 테스트가 실패한다. 
+`printer()`로 호출하던 빈이 싱글톤이 아니기 때문에
+hello,hello2이 호출하는 각 2번의 빈 요청에서 2개의 새로운 `Printer`의 구현체를 생성 했기 때문이다. <br />
+(다시 스코프 제거) 
+```
+    @Test
+    public void helloConfigSingleTonTest(){
+        ApplicationContext context = new AnnotationConfigApplicationContext(
+            HelloConfig.class);
+        Hello hello = context.getBean("hello", Hello.class);
+        Hello hello2 = context.getBean("hello2", Hello.class);
+
+        Assert.assertNotSame(hello,hello2);
+        Assert.assertSame(hello.getPrinter(),hello2.getPrinter());
+    }
+```
+
+### 프로토타입 빈의 생명주기와 종속성
+프로토타입의 빈은 IoC의 기본 원칙을 따르지 않는다. 스프링 컨테이너는 프로토타입 빈을 생성하고 DI를 하면,더이상 관리하지 않는다.
+DI 이후에는 DI를 받은 `클라이언트 오브젝트`에서 제공받은 `프로토타입 빈`을 관리한다. 그리하여 `프로토타입 빈`은 제공 받은 `클라이언트 오브젝트`에 종속된다.
+클라이언트 오브젝트가 `싱글톤`이라면 `프로토타입 빈`의 생명주기 또한 싱글톤과 같게 컨테이너의 종료와 함께 소멸될 것이다.
+
+### 프로토타입빈의 용도
+서버가요청에 따라 독립적으로 오브젝트를 사용해야 한다면 도메인 오브젝트나 DTO를 사용하면 된다.
+만약, DI가 필요하면서, 매번 새로운 오브젝트가 필요하다면 `프로토타입`으로 빈을 만드는게 유용하다.<br />
+매번 새로운 요청에 생성되어야 하는 `Request`라는 빈이 있는데, 그 빈이 DI를 필요로 한다면 스프링이 관리하는 IoC빈으로 등록되어야 한다.
+하지만 여러 요청을 처리하는 웹 환경에서는 상태값을 갖을 수 없기 때문에 싱글톤으로는 등록될 수 없다. 매번 생성되면서 DI를 받아야 한다면
+등록될 빈(Request)도 스프링이 관리하는 빈으로 등록하면서 스코프를 `prototype`으로 설정해주면 된다. 또 한 가지 문제가 있다면 
+`Request`객체를 사용하는 `Controller` 역시 싱글톤 빈으로 등록된다. 클라이언트 오브젝트의 생명주기가 싱글톤이라면 주입되는 
+`prototype`의 빈 역시도 같은 생명주기를 갖게 되기 때문에 하나의 객체를 공유하면서 데이터를 덮어 씌우는 문제가 발생한다.
+그러므로 `prototype`의 빈을 사용하려면 `DI`가 아닌 `DL` 방식을 사용해야 한다.
+
+<br />`P161 ~ `내용을 꼭 다시 읽자 <br /> 
+
+- Xml에서 ` <bean id="생략" class="생략" scope="prototype"/>`
+- 자바 코드에서 `@Scope("prototype")` 
+
+### DI(Dependency Injection)와 DL(Dependency Lookup)
+
+### 프로토타입 빈의 DL 전략
+1. ApplicationContext, BeanFactory
+- @AutoWired나 @Resource를 이용해 `ApplicationConetxt`,`BeanFactory`를 받아와 `getBean()`으로 빈을 가져오는 방식
+- 코드에 스프링 API가 나타난다는 단점이 있다.
+2. ObjectFactory, ObjectFactoryCreatingFactoryBean
+스프링 컨테이너와 클라이언트 오브젝트 사이에 `Object Factory`를 이용해서 프로토타입 빈을 얻는 방식
+    1. ObjectFactory
+        - `ObjectFactory`인터페이스는 타입 따라미터와 getObject()를 갖고 있다.
+        - `ApplicationContext`나 `BeanFactory`만틈 로우 레벨의 API를 사용하는 것이 아니라 좀 더 깔끔하다.
+        - `ObjectFactoryCreatingFactoryBean`라는 구현체를 제공해주기 때문에 직접 인터페이스를 구현할 필요는 없다.
+        - 빈으로 등록된 `ObjectFactory`를 사용하는 클라이언트 오브젝트는 `@Resource`를 통해서 빈을 주입받는 것이 좋다.
+        ```
+         <bean id="objFactory"
+           class="org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean">
+           <property name="targetBeanName" value="${protoTypeBean}"/>
+         </bean>
+       ```
+       - 자바 코드로 설정이 가능하다 (생략)
+       - DL
+       ```
+        @Resource
+        private ObjectFactory<ProtoTypeBean> typeBeanObjectFactory;
+    
+        public void setUp() {
+            ProtoTypeBean object = typeBeanObjectFactory.getObject();
+        }
+        ```
+   2. ServiceLocatorFactoryBean
+        1. `Request`를 반환하는 메서드가 정의된 인터페이스를 만든다.
+           ```
+            public interface ServiceRequestFactory {
+                ServiceRequest getServiceRequest();
+            }
+            ```
+        2. `ServiceLocatorFactoryBean`를 통해서 빈으로 등록
+            ```
+            <bean class="org.springframework.beans.factory.config.ServiceLocatorFactoryBean">
+              <property name="serviceLocatorInterface" value="springbook.learningtest.hello.ServiceRequestFactory"/>
+            </bean>
+            ```
+        3. 테스트 코드
+            ```
+              @Autowired
+              private ServiceRequestFactory serviceRequestFactory;
+          
+              @Test
+              public void serviceRequestFactoryTest(){
+                  ServiceRequest serviceRequest = serviceRequestFactory.getServiceRequest();
+                  ServiceRequest serviceRequest2 = serviceRequestFactory.getServiceRequest();
+          
+                  Assert.assertNotNull(serviceRequest);
+                  Assert.assertNotNull(serviceRequest2);
+                  Assert.assertNotSame(serviceRequest,serviceRequest2);
+              }
+            ```
+3. 메서드 주입
+상위 두 가지 방식은 코드량이 증가하는 단점과 Spring API에 의존하는 단점이 있다.
+두 가지 단점을 모두 보안하는 방법이 `메서드 주입`방식이다.
+    - 프로토타입 빈을 사용할 클라이언트 오브젝트에 `abstrac`로 프로토타입 빈을 불러들이는 메서드를 정의한다.
+    - xml 설정에서 클라이언트 빈을 등록할때 `<lookup-method name=${methodName} bean=${beanRef}>`로 설정한다.
+    - 스프링에 의존적이지 않지만 `단위 테스트`를 진행한다면 오버라이딩을 하는 번거러움이 있다. 
+
+#### 4. Provider<T> : 최신 기술!
+- `Provider<T>`는 자바 표준 인터페이스!
+    ```
+    public interface Provider<T> {
+        T get();
+    }
+    ```
+- `@Inject`애너테이션과 함께 쓰는 사용한다.
+- JavaEE6 표준 인터페이스이기 때문에 스프링 API보다 호환성이 좋다.
+- `ObjectFactory`와 다르게 빈으로 등록해주지 않아도 된다
+    ```
+       @Inject
+        private Provider<ServiceRequest> serviceRequestProvider;
+    
+        @Test
+        public void providerTest(){
+            ServiceRequest serviceRequest = serviceRequestProvider.get();
+            ServiceRequest serviceRequest2 = serviceRequestProvider.get();
+    
+            Assert.assertNotNull(serviceRequest);
+            Assert.assertNotNull(serviceRequest2);
+            Assert.assertNotSame(serviceRequest,serviceRequest2);
+        }
+    ```

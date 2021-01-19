@@ -5,13 +5,22 @@
   xsi:schemaLocation="http://www.springframework.org/schema/beans
   http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
 
-  <context:component-scan base-package="springbook.learningtest" />
+  <context:component-scan base-package="springbook.learningtest"/>
 
   <bean id="hello" class="springbook.learningtest.hello.Hello">
     <property name="name" value="youzheng"/>
     <property name="printer" ref="printer"/>
   </bean>
 
-  <bean id="printer" class="springbook.learningtest.hello.StringPrinter"/>
+  <bean id="printer" class="springbook.learningtest.hello.StringPrinter" />
+
+  <bean id="requestFactory"
+    class="org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean">
+    <property name="targetBeanName" value="printer"/>
+  </bean>
+
+  <bean class="org.springframework.beans.factory.config.ServiceLocatorFactoryBean">
+    <property name="serviceLocatorInterface" value="springbook.learningtest.hello.ServiceRequestFactory"/>
+  </bean>
 
 </beans>
