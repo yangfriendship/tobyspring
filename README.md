@@ -912,6 +912,7 @@ DI 이후에는 DI를 받은 `클라이언트 오브젝트`에서 제공받은 `
     - 어플리케이션 로직 빈을 지원하는 빈(DataSource)
     - 어플리케이션의 로직을 담당하지는 않는다.
     - 스프링 또는 외부에서 만들어진 인터페이스를 사용한다.
+    - 외부 라이브러리
     - TransactionManager, DataSource 등등이 `어플리케이션 인프라 빈`에 속한다.
 3. 컨테이너 인프라 빈
     - 스프링 컨테이너의 기능을 확장시키는 것에 참여하는 빈
@@ -940,3 +941,137 @@ DI 이후에는 DI를 받은 `클라이언트 오브젝트`에서 제공받은 `
     - 컨테이너 인프라빈이 여기에 속한다.
 스프링 3.1 부터는 `@Beam`애노테이션을 이용해 개발자가 직접 빈의 역할을 지정해줄 수 있다.
 
+### 1.5.2 컨테이너 인프라 빈을 위한 자바 코드 메타정보
+생략... P198 ~ 
+### 자바 코드를 이용한 컨테이너 인프라 빈 등록
+
+1. `@ComponentScan`
+    - `@ComponentScan(${pakage})` : 등록된 패키지를 기준으로 하위 패키지 탐색
+    - `@ComponentScan(basepackageClasses = ${MarkerInterface.class})` : 마커용 클래스를 기준으로 탐색
+    - `@ComponentScan(basePackage=${package}, excludeFilters=@Filter(Cofuguration.class))` : <br />`Cofuguration`가 붙은 클래스를 컴포턴트 스캔하지 않는다.
+    - `@ComponentScan(basePackage=${package}, excludeFilters=@Filter(type lterType.ASSIGNABLE_TYPE, value=${class}))` :<br /> 특정 클래스를 컴포턴트 스캔하지 않는다.
+2. `@Import`
+    - @Configuration이 붙은 빈 설정 클래스를 임포트할 때 사용한다.
+    - 7장에서 다시소개하신다고 한다.
+3.  `@ImportResource`
+    - `@ImportResource(${xmlFileLocation})` : xml형식의 빈 설정을 임포트할 때 사용
+4. `@EnableTransactionManagement`
+    - <tx:annotation-driven/ >와 동일하다.
+    - `@Transactional`을 사용가능하게 해준다.
+
+## 1.5.3 웹 어플리케이션의 새로운 IoC 컨테이너 구성
+웹 환경은 보통 `루트 어플리케이션 컨텍스트`와 `서플릿 어플리케이션 컨텍스트`로 나뉜다 <br />
+직접 책을 읽자! P.206 ~ 
+- 루트 어플리케이션 컨텍스트의 디폴트 클래스는 : XmlConfigApplicationContext이므로 @Configuration이 붙은 설정 클래스를 사용하려면 
+`contextClass`를 `AnnotationConfigWebApplicationContext`로 변경하고 `contextClassLoacation`에 위치를 설정해야한다.
+
+## 1.5.4 런타임 환경 추상화와 프로파일
+1. 빈 설정 파일의 변경
+    - 매번 직접 설저 파일을 변경하는 것은 바람직하지 못하다..
+
+2. 프로퍼티 파일 활용
+    - 1.2.4 참고
+    - 변화하는 환경에 따른 값을 프로퍼티를 변경함으로써 대응한다.
+3. `이해 못함`
+
+### 런타임 환경과 프로파일
+컨텍스트 내부에 `Envìronment`인터페이스를 구현한 런타임 환경 오브젝트가 만들어져서 빈을 생성하거나 DI할 때 사용한다.<br />
+런타임 환경은 `프로파일`과 `프로퍼티 소스`로 구성된다. 환경에 따라 다르게 구성된 빈들을 다른 이름을 가진 `프로파일`안에 정의한다. <br />
+각자 다른 환경에 따라 어플리케이션 컨텍스트가 초기화될 때 각자 다른 프로파일을 사용하여 각자 다른 빈들을 만드는 것이다.<br />
+1. Xml <beans>안에 1개 이상의 <beans profile=${name}> 을 지정할 수 있다.
+```
+ <beans>
+      <beans profile="dev">
+            <bean id="devDataSource"...></bean>
+      </beans>
+            <bean id="devDataSource"...></bean>
+    </beans>
+```
+2. 자바 코드에서 프로파일 설정
+    - Xml과 마찬가지로 `@Cofiguration`이 붙은 클래스 내부에 `@Cofiguration`를 지정한 클래스로 설정한다.  
+3. 활성화 방법
+    1. @ActiveProfile(${prifileName})
+    2. 루트 어플리케이션 컨텍스트 <context-param>
+        ```
+        <context-param>
+        <param-name>spring.profiles.active</param-name> 
+        <param-value>${prifileName}</param-value>
+        </context-param>
+       ```
+    3. 서블릿 컨텍스트
+        ```
+       <init-param>을 사용하하고 2번과 같다.
+       ```
+    4. `-Dspring.profiles.active=dev` : 시스템 프로퍼티를 변경 
+    5. ApplicationConetext를 사용해서 프로파일을 활성화 하려면 `.getEnvironment() ,setActiveProfiles(${profileName});`
+
+## 1.5.5 프로퍼티 소스
+- 런타임 환경 마다 변화되는 값은 프로퍼티로 저장한다.
+- DB정보와 같은 정보는 외부 리소스로 저장하여 값을 불러들이도록 설계한다
+
+### 프로퍼티
+- 한 개의 키와 대응하는 값으로 이루어져 있다.
+- 프로퍼티 파일은 텍스트 파일로 포맷 되어 있다.
+
+1. 자바에서 프로퍼티 파일을 불러들이는 방법
+    ```
+        @Test
+        public void propertiesLoadFIleTest() throws IOException {
+            Properties prop = new Properties();
+            prop.load(Resources.getResourceAsStream("database.properties"));
+            for(String name : prop.stringPropertyNames()){
+                System.out.printf("%s : %s \n   ",name, prop.get(name));
+            }
+        }
+    ```
+2. xml파일에 properties파일을 불러들이고 빈으로 등록
+    ```
+      <util:properties id="database" location="database.properties" />
+   ```
+3. `<context:property-placeholder >`을 이용한 등록
+    ```
+   <contexxt:property-placeholder location=${filePath} />
+   ```
+
+### 스프링에서 사용되는 프로퍼티 종류
+1. 환경변수
+    - 자바에서는 `System.getEnv()`메서드로 환경변수 값을 가져올 수 있다.
+    - 스프링에서는 환경변수 값을 프로퍼티 형식으로 얻어올 수 있다. `systemEnviroment`이름의 프로퍼티 타입으로 등록되어 있음
+        ```
+       @Resource // 빈 이름으로 검색해야한다.
+      private Properties systemEnviroment;
+      ```
+2. 시스템 프로퍼티
+    - JVM 레벨에 정의된 프로퍼티
+    - 1번 환경변수와 마찬가지로 얻어올 수 있다.
+3. JNDI - 완전 모르는 내용이라 생략..
+
+4. 서블릿 컨텍스트 프로퍼티
+    - web.xml에 서블릿 컨텍스트를 초기화하면서 설정한 값 `<context-param>`
+    - ServletContext 오브젝트를 직접 받아오면 해당 값을 얻을 수 있다. `getInitParameter()`
+    -  `ServletContextPropertyPlaceholderConfigurer`
+5. 서블릿 컨픽(Config) 파라미터
+    - 서블릿 컨텍스트 : 서블릿이 소속된 어플리케이션 컨텍스트
+    - 서블릿 컨픽 : 개별 서블릿을 위한 설정
+    - ServletConfigAware 인터페이스를 구현하거나 @Autowired 로 주입받아서 `getInitParameter()` 메서드로 얻는다.
+
+### 프로퍼티 통합과 추상화
+- `Environment`타입의 런타임 오브젝트를 이용해 일관된 방식으로 프로퍼티를 얻을 수 있다. <br />
+- `StandardEnvironment`는 `GenericXmlApplicationContext`나 `AnnotationConfigApplicationContext` 처럼 독립형
+어플리케이션용 컨텍스트에서 사용되는 런타임 환경 오브젝트다.
+- `시스템 프로퍼티`와 `환경변수 프로퍼티`를 제공한다. 우선순위: 시스템 > 환경변수
+- ApplicationContext의 `getEnvironment()`를 통해서 `Properties`타입을 추가하거나 기존의 등록된 값을 얻을 수 있다.
+- `Environment`의 `addFirst()`,`addLast()`,`addBefore()`,`addAfter()` 메서드를 통해서 우선순위를 조절하며 값을 추가할 수 있다.
+
+### 프로퍼티 소스의 사용
+1. `Environment.getProperty()`
+    - `@AutoWired`를 통해서 `Envioronment`를 받아와 프로퍼티를 얻을 수 있다.
+    - `@PostConturctor`을 통해서 런타임 시 프로퍼티를 가져와 값을 넣을 수 있다.
+2. `PropertySourceConfigurerPlaceholder`와 `<context:property-placeholder >`
+    - `PropertySourceConfigurerPlaceholder`를 등록하면 `${}`치환자를 사용하여 값을 불러올 수 있다.
+    - `attribute`로는 `location=${propertyFileLocation}`을 준다. 해당 프로퍼티 파일의 값을 등록해준다. 
+    - 자바 코드로 등록시 빈을 `static`으로 설정해야 런타임 시에 다른 빈에게 값을 넘겨줄 수 있다.
+    - 어플리케이션 컨텍스트는 `static`이 붙은 메서드를 우선으로 만들기 때문에 꼭 static으로 설정!
+    - xml을 이용하여 설정할 시에는 `<context:property-placeholder />`을 추가해야 사용할 수 있다.
+    
+### @PropertySource와 프로퍼티 파일

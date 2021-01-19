@@ -1,5 +1,7 @@
 package springbook.learningtest.hello;
 
+import com.ibatis.common.resources.Resources;
+import java.io.IOException;
 import java.util.Properties;
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -16,6 +18,7 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.context.support.GenericXmlApplicationContext;
 import org.springframework.context.support.StaticApplicationContext;
+import org.springframework.core.env.Environment;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.web.context.support.XmlWebApplicationContext;
@@ -41,7 +44,34 @@ public class HelloBeanTest {
     }
 
     @Test
-    public void componentBeanTest(){
+    public void systemPropertiesTest() {
+        ApplicationContext context = new GenericXmlApplicationContext(
+            "/vol2/helloAppContext.xml");
+        Environment environment = context.getBean(Environment.class);
+
+    }
+
+    @Test
+    public void xmlPropertiesBeanTest() {
+        ApplicationContext context = new GenericXmlApplicationContext(
+            "/vol2/helloAppContext.xml");
+        Properties database = context.getBean("database", Properties.class);
+        for (String name : database.stringPropertyNames()) {
+            System.out.printf("%s : %s \n   ", name, database.get(name));
+        }
+    }
+
+    @Test
+    public void propertiesLoadFIleTest() throws IOException {
+        Properties prop = new Properties();
+        prop.load(Resources.getResourceAsStream("database.properties"));
+        for (String name : prop.stringPropertyNames()) {
+            System.out.printf("%s : %s \n   ", name, prop.get(name));
+        }
+    }
+
+    @Test
+    public void componentBeanTest() {
         ApplicationContext context = new GenericXmlApplicationContext(
             "/vol2/helloAppContext.xml");
 
@@ -51,59 +81,59 @@ public class HelloBeanTest {
 
 
     @Test
-    public void initMethodTest(){
+    public void initMethodTest() {
         GenericXmlApplicationContext context = new GenericXmlApplicationContext(
             "/vol2/helloAppContext.xml");
 
         ServiceRequest request = context.getBean("serviceRequest", ServiceRequest.class);
         Assert.assertNotNull(request);
-        Assert.assertEquals("youzheng",request.getName());
+        Assert.assertEquals("youzheng", request.getName());
     }
 
     @Test
-    public void providerTest(){
+    public void providerTest() {
         ServiceRequest serviceRequest = serviceRequestProvider.get();
         ServiceRequest serviceRequest2 = serviceRequestProvider.get();
 
         Assert.assertNotNull(serviceRequest);
         Assert.assertNotNull(serviceRequest2);
-        Assert.assertNotSame(serviceRequest,serviceRequest2);
+        Assert.assertNotSame(serviceRequest, serviceRequest2);
     }
 
     @Test
-    public void serviceRequestFactoryTest(){
+    public void serviceRequestFactoryTest() {
         ServiceRequest serviceRequest = serviceRequestFactory.getServiceRequest();
         ServiceRequest serviceRequest2 = serviceRequestFactory.getServiceRequest();
 
         Assert.assertNotNull(serviceRequest);
         Assert.assertNotNull(serviceRequest2);
-        Assert.assertNotSame(serviceRequest,serviceRequest2);
+        Assert.assertNotSame(serviceRequest, serviceRequest2);
     }
 
     @Test
-    public void systemPropertiesTest(){
+    public void environmentTest() {
         ApplicationContext context = new AnnotationConfigApplicationContext(
             HelloConfig.class);
         Properties properties = context.getBean("systemProperties", Properties.class);
-        for(String prop : properties.stringPropertyNames()){
+        for (String prop : properties.stringPropertyNames()) {
             System.out.println(prop.toString() + " : " + properties.get(prop));
         }
         Assert.assertNotNull(properties);
     }
 
     @Test
-    public void helloConfigSingleTonTest(){
+    public void helloConfigSingleTonTest() {
         ApplicationContext context = new AnnotationConfigApplicationContext(
             HelloConfig.class);
         Hello hello = context.getBean("hello", Hello.class);
         Hello hello2 = context.getBean("hello2", Hello.class);
 
-        Assert.assertNotSame(hello,hello2);
-        Assert.assertSame(hello.getPrinter(),hello2.getPrinter());
+        Assert.assertNotSame(hello, hello2);
+        Assert.assertSame(hello.getPrinter(), hello2.getPrinter());
     }
 
     @Test
-    public void javaCodeConfigurationWithXmlContextTest(){
+    public void javaCodeConfigurationWithXmlContextTest() {
 
         GenericXmlApplicationContext context = new GenericXmlApplicationContext(
             "/vol2/helloAppContext.xml");
@@ -114,14 +144,15 @@ public class HelloBeanTest {
     }
 
     @Test
-    public void javaCodeConfigurationTest(){
-        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(AnnotationHelloConfig.class);
+    public void javaCodeConfigurationTest() {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(
+            AnnotationHelloConfig.class);
         Hello hello = context.getBean("annotationHello", Hello.class);
         Assert.assertNotNull(hello);
     }
 
     @Test
-    public void annotationConfigApplicationContext(){
+    public void annotationConfigApplicationContext() {
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(
             "springbook/learningtest");
 
@@ -217,7 +248,7 @@ public class HelloBeanTest {
     }
 
     @Test
-    public void childAndParentContextTest(){
+    public void childAndParentContextTest() {
 
         GenericXmlApplicationContext parentContext = new GenericXmlApplicationContext(
             "/vol2/parentContext.xml");
@@ -232,12 +263,12 @@ public class HelloBeanTest {
         Hello parentHello = parentContext.getBean("hello", Hello.class);
         Hello childHello = childContext.getBean("hello", Hello.class);
         Assert.assertNotNull(childHello);
-        Assert.assertEquals("Hello child",childHello.sayHello());
-        Assert.assertEquals("Hello parent",parentHello.sayHello());
+        Assert.assertEquals("Hello child", childHello.sayHello());
+        Assert.assertEquals("Hello parent", parentHello.sayHello());
     }
 
     @Test
-    public void childAndParentContextTest2(){
+    public void childAndParentContextTest2() {
 
         GenericXmlApplicationContext parentContext = new GenericXmlApplicationContext(
             "/vol2/parentContext.xml");
