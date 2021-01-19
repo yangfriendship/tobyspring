@@ -877,3 +877,66 @@ DI 이후에는 DI를 받은 `클라이언트 오브젝트`에서 제공받은 `
 3. `@PreDestroy` : 클래스에 있는 제거용 메서드에 추가하는 방식
 4. @Bean(destroyMethod=${methodName})
 
+## 1.4.3 팩토리 빈과 팩토리 메소드
+빈 팩토리 : 생성자 대신 코드의 도움을 받아서 빈 오브젝트를 생성한다. 빈 팩토리랑 다르다! <br />
+- 빈 팩토리는 자신을 빈 오브젝드로 사용하지 않는다. 빈 오브젝트를 생성해주는 것만 한다.
+
+1. `FactoryBean`인터페이스
+    -  new 키워드나 리플렉션 API등 생성자를 통해서 만들 수 없는 오브젝트를 빈으로 등록하기 위해 사용
+    `FactoryBean`를 구현한 후, 빈으로 등록해 사용하는 방식
+        ```
+        public interface FactoryBean<T> {
+            T getObject() throws Exception;
+            Class<?> getObjectType();
+            boolean isSingleton();
+        }
+        ```
+2. 스태틱 팩토리 메서드
+    - 오브젝트 생성과 함께 초기화 작업이 필요할 때 사용
+    - <bean id="counter" class="class.." factory-method=${factoryMehtodName} />
+3. 인스턴스 팩토리 메서드 
+    - <bean id="log" factory-bean="logFactory" factory-method='createLog" />
+    - `이해가 잘 되지않는다. 따로 알아보자`
+4. @Bean 메서드
+    - 메서드를 @Bean으로 등록하는 방법
+
+## 1.5 스프링3.1의 Ioc 컨테이너와 DI
+
+## 1.5.1 빈의 역할과 구분
+### 빈의 종류
+1. 어플리케이션 로직 빈
+    - 일반적으로 스프링 컨테이너에게 관리되는 빈
+    - 일반적으로 어플리케이션의 로직을 담고 있다. 
+    - Dao,Service, Controller 등등 모두 `어플리케이션 로직 빈`이다.
+2. 어플리케이션 인프라 빈
+    - 어플리케이션 로직 빈을 지원하는 빈(DataSource)
+    - 어플리케이션의 로직을 담당하지는 않는다.
+    - 스프링 또는 외부에서 만들어진 인터페이스를 사용한다.
+    - TransactionManager, DataSource 등등이 `어플리케이션 인프라 빈`에 속한다.
+3. 컨테이너 인프라 빈
+    - 스프링 컨테이너의 기능을 확장시키는 것에 참여하는 빈
+    - 빈의 등록, 생성, 관계설정, 초기화 작업 등에 사용된다.
+    
+### 컨테이너 인프라 빈과 전용 태그
+- 컨테이너 인프라 빈은 DefaultAdvisorAutoProxyCreator 처럼 <bean> 태그를 이용해 직접 등록 가능
+- <context:component-scan > 등록시 함께 등록되는 빈
+    - @PostContruct, @Configuration, @Bean, @AutoWired 등의 애노테이션은 스프링이 직접 등록해주는 기능이 아니다.
+    - `<context:component-scan >`를 등록해야지 사용할 수 있다.
+        - 함께 등록되는 빈
+        - ConfigurationClassPostProcessor$ImportAwareBeanPostProcessor
+        - ConfigurationClassPostProcessor : @Configuration과 @Bean을 담당
+        - AutowiredAnnotationBeanPostProcessor : @AutoWired
+        - RequiredAnnotationBeanPostProcessor
+        - PersistenceAnnotationBeanPostProcessor
+        - 대부분 후처리기 기능
+        
+### 빈의 역할
+1. ROLE_APPLICATION : 어플리케이션 작동중에 사용되는 빈
+    -  애플리케이션을 구성하는 빈
+2. ROLE_SUPPORT :  복합 구조의 빈을 정의할 때 보조적으로 사용되는 빈의 역할을 지정하려고 정의된 것
+    - 거의 사용되지 않는다 무시해도 좋다고 하십니다.
+3. ROLE_INFRASTRUCTURE : 전용태그에 의해서 등록되는 빈
+    - <context:annotation-config > , <context:component-scan > 등등
+    - 컨테이너 인프라빈이 여기에 속한다.
+스프링 3.1 부터는 `@Beam`애노테이션을 이용해 개발자가 직접 빈의 역할을 지정해줄 수 있다.
+

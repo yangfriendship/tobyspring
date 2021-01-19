@@ -19,6 +19,7 @@ import org.springframework.context.support.StaticApplicationContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.web.context.support.XmlWebApplicationContext;
+import springbook.config.SimpleConfig;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = "/vol2/helloAppContext.xml")
@@ -40,7 +41,17 @@ public class HelloBeanTest {
     }
 
     @Test
-    public void initMehtodTest(){
+    public void componentBeanTest(){
+        ApplicationContext context = new GenericXmlApplicationContext(
+            "/vol2/helloAppContext.xml");
+
+        SimpleConfig config = context.getBean(SimpleConfig.class);
+        config.hello2().sayHello();
+    }
+
+
+    @Test
+    public void initMethodTest(){
         GenericXmlApplicationContext context = new GenericXmlApplicationContext(
             "/vol2/helloAppContext.xml");
 
