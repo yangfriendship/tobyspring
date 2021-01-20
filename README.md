@@ -1075,3 +1075,34 @@ DI 이후에는 DI를 받은 `클라이언트 오브젝트`에서 제공받은 `
     - xml을 이용하여 설정할 시에는 `<context:property-placeholder />`을 추가해야 사용할 수 있다.
     
 ### @PropertySource와 프로퍼티 파일
+- 프로퍼티 파일도 프로퍼티 소스로 등록하여 사용할 수 있다.(시스템, 환경변수 이외의 값을 추가할 수 있다.)
+- @PropertySource(name = ${name}, value=${XXXX.properties,XXXX.properties}) 이름 저장할 수 있고, 다수의 값을 넣을 수도 있다.
+
+### 웹 환경에서 사용되는 프로퍼티 소스와 프로퍼티 소스 초기화 오브젝트
+- 루트 웹 컨텍스트나 서블릿 웹 컨텍스트에 의해 만들어지는 웹 어플리케이션 컨텍스트는 `StandardServletEnvironment` 런타임 환경 오브젝트를 사용한다.
+- 우선순위 순서 : 서블릿 컨픽 컨텍스트 > 서블릿 컨텍스트 > JNDI 컨텍스트 > 시스템 > 환경변수 <- 다섯가지는 기본적으로 등록된다.
+- `spring.profiles.active`라는 키를 찾아서 값을 사용하는 것이다.
+- 웹 환경에서 `@PropertySource`를 추가한 프로퍼티가 `우선순위가 가장 낮다`.
+- `ApplicationContextInitializer`인터페이스의 구현체를 이용하여 프로퍼티 소스를 추가한다.
+```
+package org.springframework.context;
+
+public interface ApplicationContextInitializer<C extends ConfigurableApplicationContext> {
+    void initialize(C var1);
+}
+```
+- `ApplicationContextInitializer`의 구현체
+```
+    public class applicationContextInitializer implements ApplicationContextInitializer {
+        @Override
+        public void initialize(ConfigurableApplicationContext configurableApplicationContext) {
+            ConfigurableEnvironment evn = configurableApplicationContext.getEnvironment();
+            /*
+            * 추가할 프로퍼티 파일을 불러들이는 작업
+            * */
+            evn.getPropertySources().addFirst(${추가할 프로퍼티});
+        }
+    }
+```
+- 루트 컨텍스트나 서블릿 컨텍스트에 추가한다.
+    - 루트 컨텍스트라면 `<context-param>`을 이용하여 추가, 서블릿 컨텍스트라면 `init-param`을 이용하여 추가한다.
