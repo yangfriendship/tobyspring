@@ -1106,3 +1106,214 @@ public interface ApplicationContextInitializer<C extends ConfigurableApplication
 ```
 - 루트 컨텍스트나 서블릿 컨텍스트에 추가한다.
     - 루트 컨텍스트라면 `<context-param>`을 이용하여 추가, 서블릿 컨텍스트라면 `init-param`을 이용하여 추가한다.
+
+# 2장 데이터 엑세스 기술
+
+## 2.1.1 DAO 패턴
+- 엔터프라이즈 어플리케이션이라면 `데이터 엑세스 계층`을 `Dao 패턴`으로 분리한다.
+- Dao는 구현 기술에 대한 정보를 외부에 공개해서는 안 된다.
+- 기술에 종속되지 않고 계발한 Dao인터페이스는 기술과 상관없이 단순한 DTO나 Mock오브젝트로 단위테스트를 작성할 수 있다.
+
+### DAO 인터페이스와 DI
+- Dao는 인터페이스를 이용해 DI되도록 만들어야 한다.
+- 구체적인 내부 구현은 `외부로 노출하지 않는다`
+- 인터페이스에 정의된 퍼블릭 인터페이스를 제외하고 직접 퍼플릭 인터페이스를 추가하면 안 된다.
+
+### 예외처리
+- Dao 메서드 선언부에 `throw XXXXException` 기술 내부의 예외를 노출시키면 안 된다.
+- Dao 내부의 메서드의 예외는 모두 `RuntimeException`으로 설계한다. Dao를 사용하는 서비스 계층에서는 Dao의 예외를 처리할 이유가 없다.
+- `중복아이디` 등등 서비스 계층에서 처리해야할 예외들도 존재한다. `낙관적인 락킹`
+- 하지만 데이터 엑세스 기술에 따라서 발생시키는 `Exception`이 다르기 때문에 서비스 계층에 `Exception`에 대한 구체적인 정보를 알고 있어야 한다.
+- 스프링에서는 이러한 `Eception`을 추상화하여 제공한다.
+- 이러한 예외를 스프링 데이터로 변환한다.
+
+### 2.1.2 템플릿과 API
+- 스프링의 데이터 기술은 `템플릿/콜백 패턴`을 사용하여 제공한다.
+- 미리 만들어진 템플릿은 반복되는 코드를 줄여준다. ex. try~catch~finally
+- 또한 예외변환과 트랜잭션 동기화 기능도 제공해준다.
+- 템플릿의 단점 : 
+    - 템플릿이 제공하는 API에 종속되는 문제
+    - 콜백 오브젝트를 익명 클래스로 작성하여 코드 이해가 조금 난해하다.
+- 하지만 스프링이 제공하는 `내장 콜백`을 이용하면 된다.
+
+### 2.1.3 DataSource
+- 풀링 기법 : 미리 정해진 개수의 DB 컨넥션을 만들어 놓고, 어플리케이션의 요청에 따라 하나씩 할당해주고 돌려받는 방식
+- DataSource는 특정 기술에 종속되면 되면 안 되기 때문에 하나의 `독립적인 빈`으로 등록해야한다. 
+
+### 학습 테스트와 통합 테스트를 위한 DataSource
+- SimpleDriverDataSource
+    - 스프링에서 제공하는 가장 단순한 DataSource 구현체
+    - `getConnection()` 메서드를 통해서 매번 새로운 컨넥션을 생성
+    - 따로 컨넥션을 관리하지 않는다.
+    - 오직 `테스트용`
+- SingleConnectionDataSource
+    - 하나의 물리 DB Connection을 만들어서 사용
+    - 그래도 하나라도 만들넣고 사용해서 SimpleDriverDataSource보다는 빠르다
+
+### 오픈소스 또는 상용 DB 컨넥션 풀
+직접 찾아보자
+
+## 2.2 JDBC
+JDBC : 자바의 데이터 엑세스 기술 중 `가장 로우 레벨`의 API <br />
+1권에서 많이 공부해서 생략하신다고 한다.
+
+## 2.2.1 스프링 JDBC 기술과 동작원리
+JdbcTemplate 인터페이스 역시 여러가지 구현 클레스가 존재한다. 아래 두 가지는 가장 쉽고 자주 사용되는 구현 클래스
+- SimpleJdbcTemplate <br />
+JDBC의 모든 기능을 최대한 활용할 수 있는 유연성을 갖고 있다.
+- SimpleJdbcInsert. SimpleJdbcCall <br />
+DB가 제공해주는 메트 정보를 이용하여 컬럼정보와 파라미터 정보를 가져와 삽입용 Sql과 프로시저 호출작업에 사용해준다.
+
+### 스프링 JDBC가 해주는 작업
+- Connection 열기/닫기
+- Statement 준비와 닫기
+    - Sql을 담을 Statement 또는 PreparedStatement를 생성 
+- Statement 실행
+    - Sql이 담긴 Statement를 실행
+- ResultSet 루프
+    - ResultSet의 루프를 만들어 다수의 커리 결과를 처리해준다.
+    - 스프링 JDBC가 미리 준비해둔 포맷 또는 오브젝트를 사용하면 편리하다.
+- 예외처리와 변환
+    - JDBC를 이용한 작업에서 발생하는 예외를 스프링의 예외 변환기가 처리한다.
+    - SqlException을 `DataAccessException` 타입으로 변환해준다.
+- 트랜잭션 처리
+    - ㅇ
+## 2.2.2 SimpleJdbcTemplate
+-  실행, 조회, 배치 세 가지 기능으로 구분
+
+### SimpleJdbcTemplate 생성
+- DataSource를 파라미터로 받아서 생성
+- 애노테이션을 이용해 오토 와이어링하는 방식을 이용
+- Dao(JdbcTemplate를 사용하는 객체)에서 DataSource를 주입받아 JdbcTemplate의 구현체를 인스턴스화 
+하도록 설계한다. Dao는 DataSource를 주입 받아 직접적으로 사용하는게 아니라, JdbcTemplate를 생성하기 위해서 주입받는다.
+```
+    @Autowired
+    public void setDataSource(DataSource dataSource) {
+        this.jdbcTemplate = new JdbcTemplate(dataSource);
+    }
+```
+### SQL 파라미터    
+- `?` 를 이용한 치환자 뿐만 아니라 `:${columnName}`을 이용해서도 값을 지정할 수 있다.
+- Map/MapSqIParameterSource
+    - Map에 데이터 값을 넣어 파라미터로 넘기는 방식
+    - 맵의 key가 컬럼이름이 되고 value가 들어갈 데이터가 된다.
+    - 메서드 체인 형식을 지원하기 때문에 코드가 깔끔해진다.
+- BeanPropertySqlParameterSource
+    - `도메인 오브젝트`나 `DTO`를 사용할 수 있게 해준다.
+
+### SQL 실행 메소드
+- varargs
+    - `?` 치환자를 이용한다면 순서를 지커야한다.
+    - `:` 치환자를 이용한다면 순서를 알아서 바인딩 해준다.
+    - 가변인지 이므로 파라미터가 없다면 생략할 수 있다.
+- Map
+    - Sql Query에서 `Values(${:치환자를이용})`로 설정하고 Map을 통해 값을 넘긴다.
+    - key와 value를 기준으로 자동 바이딩하여 쿼리를 실행
+
+### SqlParameterSource
+- `BeanPropertySqlParameterSource`를 이용해 `도메인 오브젝트`나 `DTO`를 `Update`한다.
+- Sql실행으로 영향받은 레코드의 수를 반환해준다.
+
+### SQL 조회 메소드
+- queryForInt
+    - 하나의 Int 타입 값을 조회할 때 사용
+    - 쿼리 실행후 결과가 `2개 이상`이라면 `예외발생`
+```
+    public int queryForInt(String sql, Object[] args, int[] argTypes) throws DataAccessException {...}
+```
+- queryForLong
+    - `queryForInt`의 Long 버젼
+```
+    public long queryForLong(String sql, Object[] args, int[] argTypes) throws DataAccessException {...}
+``` 
+- queryForObject
+    - 하나의 값을 가져올 때 사용한다.
+    - `단일 컬럼`의 값을 `Class<T> requiredType`으로 파리미터에 받을 수 있다. ex) String.class 
+    ```
+        public <T> T queryForObject(String sql, Class<T> requiredType) throws DataAccessException {
+            return this.queryForObject(sql, this.getSingleColumnRowMapper(requiredType));
+        }
+    ```
+    - `RowMapper<T> rowMapper`를 이용해 `단중 컬럼`의 값을 저장할 수 있다. 
+    - 콜백 오브젝트로써 직접 구현해야한다. 
+    ```
+        public <T> T queryForObject(String sql, RowMapper<T> rowMapper) throws DataAccessException {...}
+    ```
+    - Sql 실행 후, 결과의 컬럼과 값을 담을 Object의 프로퍼티가 일치한다면 
+    `BeanPropertyRowMapper<T>`를 이용하여 자동으로 값을 바인딩할 수 있다.
+- query
+    - 컬럼의 값을 RowMapper을 이용하여 저장한 후 `List`로 반환해준다.
+    ```
+        public <T> List<T> query(String sql, RowMapper<T> rowMapper) throws DataAccessException {...}
+    ```
+- queryForMap
+    - Sql 실행 후, 결과 값을 column-> key, data -> value로 바인딩하여 반환한다.
+    ```
+      public Map<String, Object> queryForMap(String sql) throws DataAccessException {...}
+  ```
+- queryForList
+    - `query`와 `queryForMap`의 다중버전
+    ```
+      public <T> List<T> queryForList(String sql, Class<T> elementType) throws DataAccessException {...}
+  
+      public List<Map<String, Object>> queryForList(String sql) throws DataAccessException {...}
+     ```
+### SQL 배치 메소드
+- SQL 배치 메소드는 update( )로 실행하는 SQ뚫을 배치 모드로 실행하게 해준다.
+- 한번에 많은 Sql(update,insert)를 할 때 사용한다.
+- batchUpdate
+    - 데이터 타입에는 아래와 같은 파라미터를 넣을 수 있다.
+    - List<Object[]>
+    - SqlParameterSource[], List<SqlParameterSource>
+    ```
+      public int[] batchUpdate(final String[] sql, ${데이터타입}) throws DataAccessException {...}
+  ```
+### 2.2.3 SimpleJdbcInsert
+P256
+
+### SimpleJdbcInsert 실행
+- execute()
+    - 파라미터로 `Map<String, Object>`과 `SqlParameterSource` 타입 가능하다.
+```
+    public int execute(Map<String, Object> args) {...}
+
+    public int execute(SqlParameterSource parameterSource) {...}
+```
+- executeAndReturnKey()
+    - Sql Query 실행후 자동으로 생성되는 값이 있다면 반환 ex)MySql의 `Auto_Increment`
+    - `usingGeneratedKeyColumns()`를 이용해 초기화 과정에서 자동생성 컬럼을 지정해야한다. 
+    ```
+            public Number executeAndReturnKey(Map<String, Object> args) {
+                return this.doExecuteAndReturnKey(args);
+            }
+    ```
+    - `Number` 타입으로 반환한다. 메서드 마지막에 메서드 체인형식으로 리턴 형식을 지정할 수 있다. ex).intValue();
+-  executeAndReturnKeyHolder()
+    - 쿼리 실행후 자동으로 생성되는 값이 두 개 이상일 때 반환 값을 받아준다.
+    - 반환 값은 `KeyHolder`으로 맵핑된다.
+    ```
+    public interface KeyHolder {
+        Number getKey() throws InvalidDataAccessApiUsageException;
+        Map<String, Object> getKeys() throws InvalidDataAccessApiUsageException;
+        List<Map<String, Object>> getKeyList();
+    }
+    ```
+## 2.2.4 SimpleJdbcCall
+DB에 저장된 `프로시저` 또는 `함수`를 호출하는 기능 <br/ >
+프로시저를 잘 몰라서 생략
+
+## 2.2.5 스프링 JDBC DAO
+Spring에서 Dao 설계
+- 일반적으로 한 테이블에 한 개의 Dao를 설계한다.
+- `DataSource`에만 의존하도록 설계
+- `JdbcTemplate`를 Dao에 인스턴스 변수로 설정하고 Dao마다 새로운 로직을 직접 설정
+- Dao는 DB Connection 정보를 담고 있는 `DataSource`를 주입받아 직접 사용하지 않고 
+`SimpleJdbcTemplate`,`SimpleJdbcInsert`,`SimpleJdbcCall`등을 생성할 때 사용하기 위해 주입받는다.
+- `SimpleJdbcTemplate` 역시 독립적인 인터페이스로 분리하여 구현해도 좋다.
+
+# 2.3 iBatis ~ 2.6 JPA,하이버네이트 전부 생략
+ibatis는 오래된 기술이라, <마이바티스 프로그래밍>으로 대체 <br />
+JPA 다른 책으로 대체 <br />
+
+### 2.6.1 트랜잭션 추상화와 동기화 
+
