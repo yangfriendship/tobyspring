@@ -1317,3 +1317,28 @@ JPA 다른 책으로 대체 <br />
 
 ### 2.6.1 트랜잭션 추상화와 동기화 
 
+~
+
+## 3.2.1 간단한 스프링 웹 프로젝트 생성
+
+### 루트 웹 애플리케이션 컨텍스트
+
+## 3.6.1 플래시 맵 매니저 전략
+플래시 애트리뷰트를 저장하는 맵, 하나의 요청에서 생성된 후 다음 요청으로 전달되는 정보 <br />
+- 보통 `Post요청`을 처리하는 컨트롤러에서 생성된다.
+- `FlashMap` 오브젝트를 생성해 Map오브젝트, 시간설정, DirectUrl을 설정할 수 있다.
+    ```
+          FlashMap flashMap = new FlashMap();
+          flashMap.put("message","Hi");
+          flashMap.setTargetRequestPath("/hello/result");
+          flashMap.startExpirationPeriod(10);
+  ```
+### 플래시맵 매니저
+- `FlashMapManager`을 통해서 `FlashMap` 오브젝트를 저장할 수 있다.
+- request가 일종의 `KEY`로 사옹되는 것 같다.
+    ```
+          RequestContextUtils.getFlashMapManager(request)
+              .saveOutputFlashMap(flashMap, request, response);
+  ```
+- `FlashMap`을 찾을 때는 `getInputFlashMap(${request})`를 이용하여 `Map<String,Object>` 반환 받을 수 있다.
+

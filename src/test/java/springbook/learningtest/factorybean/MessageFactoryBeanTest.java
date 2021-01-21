@@ -20,7 +20,7 @@ public class MessageFactoryBeanTest {
     @Ignore
     public void factoryBeanTest() {
         ApplicationContext context = new GenericXmlApplicationContext(
-            "/applicationContext.xml");
+            "/appContext.xml");
         Message message = context.getBean("message", Message.class);
         Assert.assertEquals("Factory Bean", message.getText());
 
