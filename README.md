@@ -1357,3 +1357,85 @@ public interface WebApplicationInitializer {
 - `WebApplicationInitializer`를 이용하더라도 `Listner`를 통해서 관리되도록 설정해야한다. 종료될 시점을 놓칠 수도 있다.(리소스 반환 등등)
 - `WebApplicationInitializer`의 메서드에 들어온 `ServletContext`에 값을 넘겨주는 식으로 이용하여 등록한다.
 - 자세한 내용 구글링 너무 길다.
+
+# 4장 스프링 @MVC
+## 4.1 @RequestMapping 핸들러 전략
+- 애노테이션 기반의 맵핑
+- `메서드 단위`의 맵핑이 가능
+- `@MVC`를 사용하려면 `DefaultAnnotationHandlerMapping`를 사용(별다른 설정이 없었다면 디폴드로 등록되어 있다)
+
+## 4.1.1 클래스/메서드 결합 매핑정보
+- 타입 레벨뿐 아니라 메서드 단위에도 사용 가능
+- 스프링은 이 두가지 위치에 붙은 `@RequestMapping`의 정보를 결합하여 최종 맵핑정보를 생성한다.
+- 기본 결합방법은 타입레벨(class)을 기준으로 잡고 메서드 레벨의 맵핑으로 세분화한다.
+
+### @RequestMapping 애노테이션
+1. 한 메서드 혹은 타입 단위에 다수의 Url설정이 가능
+```
+@RequestMapping("/url")
+@RequestMapping("/url2")
+@RequestMapping("/url2,")
+@RequestMapping("/url2","/url3","/url4")
+```
+2. 패스 변수
+```
+@RequestMapping("/url/{path}")
+```
+2. 디폴트 접미어 패턴 <br />
+```
+@RequestMapping("/url")
+```
+상위와 같이 설정한다면 아래 같은 결과로 나온다. 
+```
+@RequestMapping("/url","/url/","/url.*") 
+```
+
+4.Http 요청 메서드
+Http 요청을 기준으로 세분화할 수 있다. `GET`, `POST`, `HEAD`, `PUT` ,`DELETE` 등등 7가지 종류가 있다.
+```
+    @RequestMapping(value = "/hello",method = RequestMethod.DELETE)
+```
+RequestMapping에 등록된 Url을 기준으로 한 번 맵핑작업을 하고, 또 메서드 타입으로 2차 맵핑 작업을 한 결과를 사용한다.
+
+5. params <br />
+아래와 같이 파라미터를 기준으로 Url매핑을 할 수 있다. 구분이 좀 더 상세한 쪽으로 맵핑이 결정된다.
+`!`가 붙은 경우에 있으면 안 된다는 의미로 파라미터가 없을 경우에 해당 Url로 맵핑이 된다.
+```
+    @RequestMapping(value = "/hello",params = "type=user")
+    public method1(String name){...}
+
+    @RequestMapping(value = "/hello",params = "type=user")
+    public method2(String name,String type){...}
+
+    @RequestMapping(value = "/hello",params = "type=admin")
+    public method3(String name,String type){...}
+
+    @RequestMapping(value = "/hello",params = "type=!admin")
+    public method3(String name,String type){...}
+```
+
+6.Http 헤더 <br />
+잘 사용되지 않는다고 한다. 아마 RestAPI를 만들 때 사용되는 걸로 기억한다.
+```
+    @RequestMapping(value = "/hello",params = "type=admin", headers = ${type})
+```
+## 4.1 .2 타입상속 맵핑
+- `@RequestMapping`은 `상속`된다.
+- 서브 클래스에서 `@RequestMapping`을 재정의하면 슈퍼 클래스의 맵핑은 무시된다.
+- 실제로는 `Controller`를 상속하는 일을 잘 없지만 스프링의 확정성을 가만해 알아두면 좋다.
+
+### 매핑정보 상속의 종류
+
+- 상위 타입과 메소드의 @RequestMapping 상속
+    - 서브클래스에서 `@RequestMapping`를 재설정하지 않는다면 슈퍼클래스의 맵핑 설정을 그대로 사용
+    - 타입 맵핑뿐만 아니라 메서드 맵핑까지도 상속한다.
+    - 메서드를 오버라이딩하더라도 `@RequestMapping`를 재설정하지 않았다면 슈퍼클래스의 설정을 이용한다.
+    - 인터페이스 역시 상속과 같은 기준으로 작동한다.
+- 상위 타입의 @RequestMapping 하위 타입 메소드의 @RequestMapping 결합
+    - 슈퍼클래스에 타입 레벨에 맵핑이 되어있고, 서브클래스의 메서드에 맵핑이 되어있다면 `/superTypeUrl/subMathodUrl`로 결합되어 최종 맵핑된다.
+    - 인터페이스 역시 마찬가지로 작동한다.  
+- 하위 타입과 메소드의 @RequestMapping 재정의
+    - @RequestMapping을 재정의하면 슈퍼 클래스의 설정과 `결합되지 않는다`
+- 서브 클래스 메소드의 URL 패턴 없는 @RequestMapping 재정의
+    - 상위 클래스에 이미 RequestMapping가 정의되어 있을 때, 하위 클래스에서 아무 설정이 없는 RequestMapping만 붙인다면 
+    `상위 클래스의 설정을 그대로 사용한다`

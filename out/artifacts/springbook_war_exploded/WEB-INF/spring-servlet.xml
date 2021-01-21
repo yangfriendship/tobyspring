@@ -8,17 +8,22 @@
   http://www.springframework.org/schema/context/spring-context.xsd">
 
   <context:annotation-config/>
-
+  <context:component-scan base-package="springbook.web" />
   <bean id="helloSpring" class="springbook.web.HelloSpring"/>
 
-  <bean name="/hello" class="springbook.web.HelloController"/>
+<!--  <bean name="/hello" class="springbook.web.HelloController"/>-->
 
-  <bean class="org.springframework.web.servlet.handler.BeanNameUrlHandlerMapping" >
-    <property name="interceptors">
-      <list>
-        <ref bean="preHandler" />
-      </list>
-    </property>
+<!--  <bean class="org.springframework.web.servlet.handler.BeanNameUrlHandlerMapping" >-->
+<!--    <property name="interceptors">-->
+<!--      <list>-->
+<!--        <ref bean="preHandler" />-->
+<!--      </list>-->
+<!--    </property>-->
+<!--  </bean>-->
+
+  <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+    <property name="prefix" value="/WEB-INF/view/"/>
+    <property name="suffix" value=".jsp"/>
   </bean>
 
   <bean id="preHandler" class="springbook.web.interceptor.PreHandler" />
