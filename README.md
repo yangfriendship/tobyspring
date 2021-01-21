@@ -1342,3 +1342,18 @@ JPA 다른 책으로 대체 <br />
   ```
 - `FlashMap`을 찾을 때는 `getInputFlashMap(${request})`를 이용하여 `Map<String,Object>` 반환 받을 수 있다.
 
+## 3.6.2 WebApplicationInitializer를 이용한 컨텍스트 등록
+```
+public interface WebApplicationInitializer {
+    void onStartup(ServletContext var1) throws ServletException;
+}
+```
+- 프레임워크 모듈에서 직접 서블릿 컨텍스트 초기화 작업을 관리하는 방법을 지원한다.
+- 서블릿 컨텍스트 초기화 작업에는 `서블릿 등록`, `리스너 등록`, `필터 등록`등 xml이 도맡아 하던 작업들을 말한다.
+- 웹 어플리케이션이 실행될 때,`WebApplicationInitializer`구현한 클래스의 `onStartUp()`메서드를 실행시킨다.
+
+### 루트 웹 컨렉스트 등록
+- web.xml에서 `Listner`을 이용해 `ApplicationContext`을 생성했던 이유는 이 둘의 생명주기가 일치하기 때문이다.
+- `WebApplicationInitializer`를 이용하더라도 `Listner`를 통해서 관리되도록 설정해야한다. 종료될 시점을 놓칠 수도 있다.(리소스 반환 등등)
+- `WebApplicationInitializer`의 메서드에 들어온 `ServletContext`에 값을 넘겨주는 식으로 이용하여 등록한다.
+- 자세한 내용 구글링 너무 길다.
